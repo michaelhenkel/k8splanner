@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"gopkg.in/yaml.v3"
@@ -95,7 +96,7 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 					}},
 				}
 			*/
-			taskByte, err := yaml.Marshal(task)
+			taskByte, err := yaml.Marshal(task.Spec.Tasks)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -159,6 +160,10 @@ func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configM
 	task.Spec.Container.VolumeMounts = append(task.Spec.Container.VolumeMounts, corev1.VolumeMount{
 		Name:      "task",
 		MountPath: "/var/task",
+	})
+	task.Spec.Container.VolumeMounts = append(task.Spec.Container.VolumeMounts, corev1.VolumeMount{
+		Name:      volume.Name,
+		MountPath: fmt.Sprintf("/mnt/%s", task.Name),
 	})
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
