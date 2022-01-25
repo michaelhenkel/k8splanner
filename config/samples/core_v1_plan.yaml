@@ -4,14 +4,16 @@ metadata:
   name: test-plan
 spec:
   stages:
-    pullCode:
-      taskReferences:
-      - name: pull-cn2
-        kind: Task
-    build:
-      taskReferences:
-      - name: build-apiserver
-        kind: Task   
+  - name: stage1
+    taskReferences:
+    - name: task1stage1
+      kind: Task
+    - name: task2stage1
+      kind: Task
+  - name: stage2
+    taskReferences:
+    - name: task1stage2
+      kind: Task   
   volume:
     name: builder
     glusterfs:

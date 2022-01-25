@@ -1,0 +1,16 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: task1stage1
+spec:
+  tasks:
+    build:
+      cmds:
+      - cmd: echo hello > /tmp/bla
+  container:
+    name: build-apiserver
+    image: svl-artifactory.juniper.net/atom-docker/cn2/bazel-build/dev/tasker
+    command: ["sh", "-c", "until cat /tmp/bla; do sleep 10;done"]
+  
+
+

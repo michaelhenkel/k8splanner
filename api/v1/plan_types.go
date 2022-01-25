@@ -22,10 +22,18 @@ import (
 )
 
 type RepositoryType string
+type Phase string
+type StageState string
 
 const (
-	GIT RepositoryType = "git"
-	TGZ RepositoryType = "tgz"
+	GIT         RepositoryType = "git"
+	TGZ         RepositoryType = "tgz"
+	INITIALIZED Phase          = "initialized"
+	STARTED     Phase          = "started"
+	RUNNING     Phase          = "running"
+	FINISHED    Phase          = "finished"
+	SUCCESS     StageState     = "success"
+	FAILED      StageState     = "failed"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -35,11 +43,12 @@ const (
 type PlanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Stages map[string]Stage `json:"stages,omitempty"`
-	Volume *corev1.Volume   `json:"volume,omitempty"`
+	Stages []Stage        `json:"stages,omitempty"`
+	Volume *corev1.Volume `json:"volume,omitempty"`
 }
 
 type Stage struct {
+	Name           string                             `json:"name,omitempty"`
 	TaskReferences []corev1.TypedLocalObjectReference `json:"taskReferences,omitempty"`
 }
 
@@ -47,7 +56,19 @@ type Stage struct {
 type PlanStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Condition string `json:"condition,omitempty"`
+	Condition    string                 `json:"condition,omitempty"`
+	StageStatus  map[string]StageStatus `json:"stageStatus,omitempty"`
+	CurrentStage string                 `json:"currentStage,omitempty"`
+}
+
+type StageStatus struct {
+	Phase      Phase                `json:"phase,omitempty"`
+	StageState StageState           `json:"stageState,omitempty"`
+	TaskPhase  map[string]TaskPhase `json:"taskPhase,omitempty"`
+}
+
+type TaskPhase struct {
+	Phase Phase `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true

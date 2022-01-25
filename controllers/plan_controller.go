@@ -26,30 +26,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1 "michaelhenkel/k8splanner/api/v1"
+	"michaelhenkel/k8splanner/predicates"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-)
-
-var (
-	taskCommandList = []string{
-		"sh",
-		"-c",
-		"while true; do sleep 10;done",
-	}
-)
-
-const (
-	codePullImage = "busybox:latest"
 )
 
 // PlanReconciler reconciles a Plan object
@@ -80,68 +71,182 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	updateStatus := false
 	for _, stage := range plan.Spec.Stages {
-		for _, taskRef := range stage.TaskReferences {
-			task := &v1.Task{}
-			if err := r.Client.Get(ctx, client.ObjectKey{Name: taskRef.Name, Namespace: req.Namespace}, task); err != nil {
-				klog.Error("task reference %s not found", taskRef.Name)
-				return ctrl.Result{}, err
+		if plan.Status.StageStatus == nil {
+			var stageStatusMap = make(map[string]v1.StageStatus)
+			plan.Status.StageStatus = stageStatusMap
+		}
+		if _, ok := plan.Status.StageStatus[stage.Name]; !ok {
+			var taskPhaseMap = make(map[string]v1.TaskPhase)
+			for _, taskRef := range stage.TaskReferences {
+				taskPhaseMap[taskRef.Name] = v1.TaskPhase{
+					Phase: v1.INITIALIZED,
+				}
 			}
-			t := struct {
-				Version string         `json:"version,omitempty"`
-				Tasks   taskfile.Tasks `json:"tasks,omitempty"`
-			}{
-				Version: "3",
-				Tasks:   task.Spec.Tasks,
+			plan.Status.StageStatus[stage.Name] = v1.StageStatus{
+				Phase:     v1.INITIALIZED,
+				TaskPhase: taskPhaseMap,
 			}
+			updateStatus = true
+		}
+	}
+	if updateStatus {
+		if err := r.Client.Status().Update(ctx, plan, &client.UpdateOptions{}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
 
-			taskByte, err := yaml.Marshal(&t)
-			if err != nil {
-				return ctrl.Result{}, err
+	for _, stage := range plan.Spec.Stages {
+		if stageStatus, ok := plan.Status.StageStatus[stage.Name]; ok {
+			manageTask := false
+			switch stageStatus.Phase {
+			case v1.INITIALIZED:
+				currentStageStatus := plan.Status.StageStatus[stage.Name]
+				currentStageStatus.Phase = v1.RUNNING
+				plan.Status.StageStatus[stage.Name] = currentStageStatus
+				plan.Status.CurrentStage = stage.Name
+				if err := r.Client.Status().Update(ctx, plan, &client.UpdateOptions{}); err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{Requeue: true}, nil
+				//manageTask = true
+			case v1.FINISHED:
+				continue
+			case v1.RUNNING:
+				manageTask = true
 			}
-			taskConfigMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      taskRef.Name,
-					Namespace: req.Namespace,
-				},
-				Data: map[string]string{"task": string(taskByte)},
-			}
-
-			foundConfigMap := &corev1.ConfigMap{}
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: taskRef.Name}, foundConfigMap); err != nil {
-				if errors.IsNotFound(err) {
-					if err := controllerutil.SetOwnerReference(plan, taskConfigMap, r.Scheme); err != nil {
+			if manageTask {
+				updateStatus, err := r.manageTasks(ctx, stage.TaskReferences, plan, req, stage.Name)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				if updateStatus {
+					if err := r.Client.Status().Update(ctx, plan, &client.UpdateOptions{}); err != nil {
 						return ctrl.Result{}, err
 					}
-					if err := r.Client.Create(ctx, taskConfigMap, &client.CreateOptions{}); err != nil {
-						return ctrl.Result{}, err
+					fmt.Println("updated task")
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+			allTasksFinished := true
+			for _, taskPhase := range stageStatus.TaskPhase {
+				if taskPhase.Phase != v1.FINISHED {
+					allTasksFinished = false
+				}
+			}
+			if allTasksFinished {
+				currentStageStatus := plan.Status.StageStatus[stage.Name]
+				currentStageStatus.Phase = v1.FINISHED
+				plan.Status.StageStatus[stage.Name] = currentStageStatus
+				if err := r.Client.Status().Update(ctx, plan, &client.UpdateOptions{}); err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{Requeue: true}, nil
+			} else {
+				return ctrl.Result{}, nil
+			}
+		}
+
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *PlanReconciler) manageTasks(ctx context.Context, TaskReferences []corev1.TypedLocalObjectReference, plan *v1.Plan, req ctrl.Request, stageName string) (bool, error) {
+	updateStatus := false
+	for _, taskRef := range TaskReferences {
+		task := &v1.Task{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskRef.Name, Namespace: req.Namespace}, task); err != nil {
+			klog.Error("task reference %s not found", taskRef.Name)
+			return false, err
+		}
+		if stageStatus, ok := plan.Status.StageStatus[stageName]; ok {
+			if taskPhase, ok := stageStatus.TaskPhase[task.Name]; ok {
+				switch taskPhase.Phase {
+				case v1.FINISHED:
+					continue
+				}
+			}
+		}
+		t := struct {
+			Version string         `json:"version,omitempty"`
+			Tasks   taskfile.Tasks `json:"tasks,omitempty"`
+		}{
+			Version: "3",
+			Tasks:   task.Spec.Tasks,
+		}
+
+		taskByte, err := yaml.Marshal(&t)
+		if err != nil {
+			return false, err
+		}
+		taskConfigMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      taskRef.Name,
+				Namespace: req.Namespace,
+			},
+			Data: map[string]string{"task": string(taskByte)},
+		}
+
+		foundConfigMap := &corev1.ConfigMap{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: taskRef.Name}, foundConfigMap); err != nil {
+			if errors.IsNotFound(err) {
+				if err := controllerutil.SetOwnerReference(plan, taskConfigMap, r.Scheme); err != nil {
+					return false, err
+				}
+				if err := r.Client.Create(ctx, taskConfigMap, &client.CreateOptions{}); err != nil {
+					return false, err
+				}
+			}
+		} else {
+			if !reflect.DeepEqual(taskConfigMap.Data, foundConfigMap.Data) {
+				if err := r.Client.Update(ctx, taskConfigMap, &client.UpdateOptions{}); err != nil {
+					return false, err
+				}
+			}
+		}
+		job := r.defineJob(task, plan.Spec.Volume, taskConfigMap, plan.Name)
+		foundJob := &batchv1.Job{}
+		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(job), foundJob); err != nil {
+			if errors.IsNotFound(err) {
+				if err := controllerutil.SetControllerReference(plan, job, r.Scheme); err != nil {
+					return false, err
+				}
+				if err := r.Create(ctx, job, &client.CreateOptions{}); err != nil {
+					klog.Errorf("failed to create code pull job %s with error %s", job.Name, err)
+					return false, err
+				}
+				if stageStatus, ok := plan.Status.StageStatus[stageName]; ok {
+					if taskPhase, ok := stageStatus.TaskPhase[task.Name]; ok {
+						switch taskPhase.Phase {
+						case v1.INITIALIZED:
+							updateStatus = true
+							taskPhase.Phase = v1.RUNNING
+							stageStatus.TaskPhase[task.Name] = taskPhase
+						}
 					}
 				}
 			} else {
-				if !reflect.DeepEqual(taskConfigMap.Data, foundConfigMap.Data) {
-					if err := r.Client.Update(ctx, taskConfigMap, &client.UpdateOptions{}); err != nil {
-						return ctrl.Result{}, err
-					}
-				}
+				return false, err
 			}
-			job := r.defineJob(task, plan.Spec.Volume, taskConfigMap, plan.Name)
-			foundJob := &batchv1.Job{}
-			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(job), foundJob); err != nil {
-				if errors.IsNotFound(err) {
-					if err := controllerutil.SetControllerReference(plan, job, r.Scheme); err != nil {
-						return reconcile.Result{}, err
+		} else {
+			for _, condition := range foundJob.Status.Conditions {
+				if condition.Type == batchv1.JobComplete && condition.Status == "True" {
+					if stageStatus, ok := plan.Status.StageStatus[stageName]; ok {
+						if taskPhase, ok := stageStatus.TaskPhase[task.Name]; ok {
+							updateStatus = true
+							taskPhase.Phase = v1.FINISHED
+							stageStatus.TaskPhase[task.Name] = taskPhase
+						}
 					}
-					if err := r.Create(ctx, job, &client.CreateOptions{}); err != nil {
-						klog.Errorf("failed to create code pull job %s with error %s", job.Name, err)
-						return ctrl.Result{}, err
-					}
-				} else {
-					return ctrl.Result{}, err
+
 				}
 			}
 		}
 	}
-	return ctrl.Result{}, nil
+
+	return updateStatus, nil
 }
 
 func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configMap *corev1.ConfigMap, planeName string) *batchv1.Job {
@@ -185,6 +290,7 @@ func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configM
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      task.Name,
 			Namespace: task.Namespace,
+			Labels:    map[string]string{"k8splanner": task.Name},
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -204,5 +310,15 @@ func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configM
 func (r *PlanReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Plan{}).
+		Watches(
+			&source.Kind{Type: &batchv1.Job{}},
+			&handler.EnqueueRequestForOwner{
+				OwnerType:    &v1.Plan{},
+				IsController: true,
+			},
+			builder.WithPredicates(predicates.JobStatusChangePredicate{
+				Scheme: r.Scheme,
+			}),
+		).
 		Complete(r)
 }

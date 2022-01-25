@@ -35,48 +35,13 @@ spec:
           spec:
             description: PlanSpec defines the desired state of Plan
             properties:
-              codePullTaskReference:
-                description: TypedLocalObjectReference contains enough information
-                  to let you locate the typed referenced object inside the same namespace.
-                properties:
-                  apiGroup:
-                    description: APIGroup is the group for the resource being referenced.
-                      If APIGroup is not specified, the specified Kind must be in
-                      the core API group. For any other third-party types, APIGroup
-                      is required.
-                    type: string
-                  kind:
-                    description: Kind is the type of resource being referenced
-                    type: string
-                  name:
-                    description: Name is the name of resource being referenced
-                    type: string
-                required:
-                - kind
-                - name
-                type: object
-              repositories:
-                description: Reositories is a list of code repositories used in the
-                  plan
+              stages:
+                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                  Important: Run "make" to regenerate code after modifying this file'
                 items:
-                  description: Repository defines a location from which the source
-                    code is downloaded
                   properties:
-                    location:
-                      type: string
                     name:
                       type: string
-                    tokenSecret:
-                      type: string
-                    type:
-                      type: string
-                    userPasswordSecret:
-                      type: string
-                  type: object
-                type: array
-              stages:
-                additionalProperties:
-                  properties:
                     taskReferences:
                       items:
                         description: TypedLocalObjectReference contains enough information
@@ -101,7 +66,7 @@ spec:
                         type: object
                       type: array
                   type: object
-                type: object
+                type: array
               volume:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
@@ -1553,6 +1518,24 @@ spec:
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
                 type: string
+              currentStage:
+                type: string
+              stageStatus:
+                additionalProperties:
+                  properties:
+                    phase:
+                      type: string
+                    stageState:
+                      type: string
+                    taskPhase:
+                      additionalProperties:
+                        properties:
+                          phase:
+                            type: string
+                        type: object
+                      type: object
+                  type: object
+                type: object
             type: object
         type: object
     served: true
