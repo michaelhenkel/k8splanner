@@ -8,8 +8,12 @@ spec:
       taskReferences:
       - name: pull-cn2
         kind: Task
+    build:
+      taskReferences:
+      - name: build-apiserver
+        kind: Task   
   volume:
-    name: test
+    name: builder
     glusterfs:
       endpoints: glusterfs-cluster
       path: builder

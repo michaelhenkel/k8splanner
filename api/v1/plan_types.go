@@ -35,25 +35,12 @@ const (
 type PlanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Reositories is a list of code repositories used in the plan
-	Repositories          []Repository                      `json:"repositories,omitempty"`
-	Stages                map[string]Stage                  `json:"stages,omitempty"`
-	Volume                *corev1.Volume                    `json:"volume,omitempty"`
-	CodePullTaskReference *corev1.TypedLocalObjectReference `json:"codePullTaskReference,omitempty"`
+	Stages map[string]Stage `json:"stages,omitempty"`
+	Volume *corev1.Volume   `json:"volume,omitempty"`
 }
 
 type Stage struct {
 	TaskReferences []corev1.TypedLocalObjectReference `json:"taskReferences,omitempty"`
-}
-
-// Repository defines a location from which the source code is downloaded
-type Repository struct {
-	Name               string         `json:"name,omitempty"`
-	Type               RepositoryType `json:"type,omitempty"`
-	Location           string         `json:"location,omitempty"`
-	TokenSecret        string         `json:"tokenSecret,omitempty"`
-	UserPasswordSecret string         `json:"userPasswordSecret,omitempty"`
 }
 
 // PlanStatus defines the observed state of Plan

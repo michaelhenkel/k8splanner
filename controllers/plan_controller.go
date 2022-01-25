@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/michaelhenkel/task/v3/taskfile"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
@@ -86,21 +87,18 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				klog.Error("task reference %s not found", taskRef.Name)
 				return ctrl.Result{}, err
 			}
-			/*
-				tspec := v1.TaskSpec{
+			t := struct {
+				Version string         `json:"version,omitempty"`
+				Tasks   taskfile.Tasks `json:"tasks,omitempty"`
+			}{
+				Version: "3",
+				Tasks:   task.Spec.Tasks,
+			}
 
-					Tasks: map[string]*taskfile.Task{"bla": &taskfile.Task{
-						Cmds: []*taskfile.Cmd{{
-							Cmd: "bla",
-						}},
-					}},
-				}
-			*/
-			taskByte, err := yaml.Marshal(task.Spec.Tasks)
+			taskByte, err := yaml.Marshal(&t)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-
 			taskConfigMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      taskRef.Name,
@@ -126,7 +124,7 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 					}
 				}
 			}
-			job := r.defineJob(task, plan.Spec.Volume, taskConfigMap)
+			job := r.defineJob(task, plan.Spec.Volume, taskConfigMap, plan.Name)
 			foundJob := &batchv1.Job{}
 			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(job), foundJob); err != nil {
 				if errors.IsNotFound(err) {
@@ -146,7 +144,7 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configMap *corev1.ConfigMap) *batchv1.Job {
+func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configMap *corev1.ConfigMap, planeName string) *batchv1.Job {
 	taskVolume := corev1.Volume{
 		Name: "task",
 		VolumeSource: corev1.VolumeSource{
@@ -163,8 +161,26 @@ func (r *PlanReconciler) defineJob(task *v1.Task, volume *corev1.Volume, configM
 	})
 	task.Spec.Container.VolumeMounts = append(task.Spec.Container.VolumeMounts, corev1.VolumeMount{
 		Name:      volume.Name,
-		MountPath: fmt.Sprintf("/mnt/%s", task.Name),
+		MountPath: fmt.Sprintf("/mnt/%s", volume.Name),
 	})
+	task.Spec.Container.Env = []corev1.EnvVar{{
+		Name: "PodName",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.name",
+			},
+		},
+	}, {
+		Name: "PodNamespace",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
+			},
+		},
+	}, {
+		Name:  "Plan",
+		Value: planeName,
+	}}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      task.Name,
