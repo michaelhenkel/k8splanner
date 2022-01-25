@@ -1,0 +1,24 @@
+# permissions for end users to edit plans.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: plan-editor-role
+rules:
+- apiGroups:
+  - core.michaelhenkel
+  resources:
+  - plans
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.michaelhenkel
+  resources:
+  - plans/status
+  verbs:
+  - get

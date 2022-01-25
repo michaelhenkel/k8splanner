@@ -1,0 +1,15 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: test-plan
+spec:
+  stages:
+    pullCode:
+      taskReferences:
+      - name: pull-cn2
+        kind: Task
+  volume:
+    name: test
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder
