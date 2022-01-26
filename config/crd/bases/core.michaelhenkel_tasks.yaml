@@ -1230,163 +1230,30 @@ spec:
                 type: object
               tasks:
                 additionalProperties:
-                  description: Task represents a task
                   properties:
                     cmds:
                       items:
-                        description: Cmd is a task command
-                        properties:
-                          cmd:
-                            type: string
-                          defer:
-                            type: boolean
-                          ignoreError:
-                            type: boolean
-                          silent:
-                            type: boolean
-                          task:
-                            type: string
-                          vars:
-                            description: Vars is a string[string] variables map.
-                            properties:
-                              keys:
-                                items:
-                                  type: string
-                                type: array
-                              mapping:
-                                additionalProperties:
-                                  description: Var represents either a static or dynamic
-                                    variable.
-                                  properties:
-                                    dir:
-                                      type: string
-                                    sh:
-                                      type: string
-                                    static:
-                                      type: string
-                                  type: object
-                                type: object
-                            type: object
-                        type: object
+                        type: string
                       type: array
-                    deps:
-                      items:
-                        description: Dep is a task dependency
-                        properties:
-                          task:
-                            type: string
-                          vars:
-                            description: Vars is a string[string] variables map.
-                            properties:
-                              keys:
-                                items:
-                                  type: string
-                                type: array
-                              mapping:
-                                additionalProperties:
-                                  description: Var represents either a static or dynamic
-                                    variable.
-                                  properties:
-                                    dir:
-                                      type: string
-                                    sh:
-                                      type: string
-                                    static:
-                                      type: string
-                                  type: object
-                                type: object
-                            type: object
-                        type: object
-                      type: array
-                    desc:
-                      type: string
                     dir:
                       type: string
                     env:
-                      description: Vars is a string[string] variables map.
-                      properties:
-                        keys:
-                          items:
-                            type: string
-                          type: array
-                        mapping:
-                          additionalProperties:
-                            description: Var represents either a static or dynamic
-                              variable.
-                            properties:
-                              dir:
-                                type: string
-                              sh:
-                                type: string
-                              static:
-                                type: string
-                            type: object
-                          type: object
+                      additionalProperties:
+                        type: string
                       type: object
                     generates:
                       items:
                         type: string
                       type: array
-                    ignoreError:
-                      type: boolean
-                    interactive:
-                      type: boolean
-                    label:
-                      type: string
-                    method:
-                      type: string
-                    preconditions:
-                      items:
-                        description: Precondition represents a precondition necessary
-                          for a task to run
-                        properties:
-                          msg:
-                            type: string
-                          sh:
-                            type: string
-                        type: object
-                      type: array
-                    prefix:
-                      type: string
-                    run:
-                      type: string
-                    silent:
-                      type: boolean
                     sources:
                       items:
                         type: string
                       type: array
-                    status:
-                      items:
-                        type: string
-                      type: array
-                    summary:
-                      type: string
-                    task:
-                      type: string
                     vars:
-                      description: Vars is a string[string] variables map.
-                      properties:
-                        keys:
-                          items:
-                            type: string
-                          type: array
-                        mapping:
-                          additionalProperties:
-                            description: Var represents either a static or dynamic
-                              variable.
-                            properties:
-                              dir:
-                                type: string
-                              sh:
-                                type: string
-                              static:
-                                type: string
-                            type: object
-                          type: object
+                      additionalProperties:
+                        type: string
                       type: object
                   type: object
-                description: Tasks represents a group of tasks
                 type: object
             type: object
           status:

@@ -1,0 +1,27 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: build-vrouter-supervisor
+spec:
+  tasks:
+    build:
+      env:
+        GOPATH: /mnt/builder/${PodNamespace}/${Plan}
+        GOCACHE: /mnt/builder/.cache/go-build
+      vars:
+        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
+      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
+      - if [ ! -d "/mnt/builer/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builer/${PodNamespace}/${Plan}/out; fi
+      - cd {{ .REPOPATH }}/vrouter-supervisor && /usr/local/go/bin/go build -o /mnt/builer/${PodNamespace}/${Plan}/out/vrouter-supervisor main.go
+      sources:
+      - "{{ .REPOPATH }}/vrouter-supervisor/**/*.go"
+      generates:
+      - /mnt/builer/${PodNamespace}/${Plan}/out/vrouter-supervisor
+  container:
+    name: build-vrouter-supervisor
+    image: registry.default.svc.cluster1.local:5000/tasker
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/vrouter-supervisor-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/vrouter-supervisor-task.yaml build"]
+  
+
+

@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/michaelhenkel/task/v3/taskfile"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,8 +29,17 @@ type TaskSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Tasks     taskfile.Tasks    `json:"tasks,omitempty"`
+	Tasks     map[string]GoTask `json:"tasks,omitempty"`
 	Container *corev1.Container `json:"container,omitempty"`
+}
+
+type GoTask struct {
+	Cmds      []string          `json:"cmds,omitempty"`
+	Vars      map[string]string `json:"vars,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
+	Dir       string            `json:"dir,omitempty"`
+	Sources   []string          `json:"sources,omitempty"`
+	Generates []string          `json:"generates,omitempty"`
 }
 
 // TaskStatus defines the observed state of Task

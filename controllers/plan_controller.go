@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/michaelhenkel/task/v3/taskfile"
-	"gopkg.in/yaml.v3"
+	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -170,8 +169,8 @@ func (r *PlanReconciler) manageTasks(ctx context.Context, TaskReferences []corev
 			}
 		}
 		t := struct {
-			Version string         `json:"version,omitempty"`
-			Tasks   taskfile.Tasks `json:"tasks,omitempty"`
+			Version string               `json:"version,omitempty"`
+			Tasks   map[string]v1.GoTask `json:"tasks,omitempty"`
 		}{
 			Version: "3",
 			Tasks:   task.Spec.Tasks,

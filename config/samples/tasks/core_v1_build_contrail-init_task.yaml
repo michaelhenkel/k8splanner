@@ -1,0 +1,27 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: build-contrail-init
+spec:
+  tasks:
+    build:
+      env:
+        GOPATH: /mnt/builder/${PodNamespace}/${Plan}
+        GOCACHE: /mnt/builder/.cache/go-build
+      vars:
+        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
+      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
+      - if [ ! -d "/mnt/builer/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builer/${PodNamespace}/${Plan}/out; fi
+      - cd {{ .REPOPATH }}/contrail-init && /usr/local/go/bin/go build -o /mnt/builer/${PodNamespace}/${Plan}/out/contrail-init main.go
+      sources:
+      - "{{ .REPOPATH }}/contrail-init/**/*.go"
+      generates:
+      - /mnt/builer/${PodNamespace}/${Plan}/out/contrail-init
+  container:
+    name: build-contrail-init
+    image: registry.default.svc.cluster1.local:5000/tasker
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml build"]
+  
+
+

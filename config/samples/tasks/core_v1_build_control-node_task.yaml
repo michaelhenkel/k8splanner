@@ -1,0 +1,42 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: build-control-node
+spec:
+  tasks:
+    build:
+      env:
+        GOPATH: /mnt/builder/${PodNamespace}/${Plan}
+        CCACHE_DIR: /mnt/builder/.cache/ccache
+        GOCACHE: /mnt/builder/.cache/go-build
+      vars:
+        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
+      - if [ ! -d "/mnt/builder/.cache/ccache" ]; then mkdir -p /mnt/builder/.cache/ccache; fi
+      - if [ ! -d "/root/go" ]; then mkdir -p /root/go; fi
+      - if [ ! -d "/mnt/builer/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builer/${PodNamespace}/${Plan}/out; fi
+      - if [ ! -d "/tf-dev-env/tools" ]; then mkdir -p /tf-dev-env/tools; fi
+      - if [ ! -L "/tf-dev-env/src" ]; then ln -s {{ .REPOPATH }}/src /tf-dev-env/src; fi
+      - if [ ! -L "/tf-dev-env/controller" ]; then ln -s {{ .REPOPATH }}/controller /tf-dev-env/controller; fi
+      - if [ ! -L "/tf-dev-env/vrouter" ]; then ln -s {{ .REPOPATH }}/vrouter /tf-dev-env/vrouter; fi
+      - if [ ! -L "/tf-dev-env/tools/build" ]; then ln -s {{ .REPOPATH }}/tools/build /tf-dev-env/tools/build; fi
+      - if [ ! -L "/tf-dev-env/SConstruct" ]; then ln -s {{ .REPOPATH }}/SConstruct /tf-dev-env/SConstruct; fi
+      - if [ ! -L "/root/go/src" ]; then ln -s /mnt/builder/${PodNamespace}/${Plan}/src /root/go/src; fi
+      - cd /tf-dev-env && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) control-node
+      - cp /tf-dev-env/build/production/control-node/contrail-control /mnt/builer/${PodNamespace}/${Plan}/out/contrail-control
+      - strip /mnt/builer/${PodNamespace}/${Plan}/out/contrail-control
+      sources:
+      - "/tf-dev-env/**/*.cc"
+      - "/tf-dev-env/**/*.c"
+      - "/tf-dev-env/**/*.h"
+      generates:
+      - /mnt/builer/${PodNamespace}/${Plan}/out/contrail-control
+  container:
+    name: build-control-node
+    image: registry.default.svc.cluster1.local:5000/c-builder:latest
+    resources:
+      requests:
+        memory: "32Gi"
+        cpu: "16"
+    #command: ["sh","-c","while true;do sleep 10;done"]
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/control-node-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/control-node-task.yaml build"]

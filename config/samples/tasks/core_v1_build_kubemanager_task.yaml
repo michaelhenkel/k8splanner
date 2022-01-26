@@ -1,0 +1,27 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: build-kubemanager
+spec:
+  tasks:
+    build:
+      env:
+        GOPATH: /mnt/builder/${PodNamespace}/${Plan}
+        GOCACHE: /mnt/builder/.cache/go-build
+      vars:
+        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
+      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
+      - if [ ! -d "/mnt/builer/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builer/${PodNamespace}/${Plan}/out; fi
+      - cd {{ .REPOPATH }}/kube-manager && /usr/local/go/bin/go build -o /mnt/builer/${PodNamespace}/${Plan}/out/contrail-k8s-kubemanager cmd/manager/main.go
+      sources:
+      - "{{ .REPOPATH }}/kube-manager/**/*.go"
+      generates:
+      - /mnt/builer/${PodNamespace}/${Plan}/out/contrail-k8s-kubemanager
+  container:
+    name: build-kubemanager
+    image: registry.default.svc.cluster1.local:5000/tasker
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/kubemanager-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/kubemanager-task.yaml build"]
+  
+
+

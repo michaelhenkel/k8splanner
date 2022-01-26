@@ -1,0 +1,31 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: build-cn2
+spec:
+  stages:
+  - name: pullrepo
+    taskReferences:
+    - name: pull-cn2
+      kind: Task
+  - name: build
+    taskReferences:
+    - name: build-apiserver
+      kind: Task
+    - name: build-controller
+      kind: Task
+    - name: build-kubemanager
+      kind: Task
+    - name: build-deployer
+      kind: Task
+    - name: build-contrail-init
+      kind: Task
+    - name: build-vrouter-go
+      kind: Task
+    - name: build-control-node
+      kind: Task
+  volume:
+    name: builder
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder

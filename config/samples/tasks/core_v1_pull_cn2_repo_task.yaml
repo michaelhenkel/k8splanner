@@ -1,0 +1,21 @@
+apiVersion: core.michaelhenkel/v1
+kind: Task
+metadata:
+  name: pull-cn2
+spec:
+  tasks:
+    clone:
+      vars:
+        REPO: ssd-git.juniper.net/contrail/cn2.git
+        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+        TOKEN: Ldp61SNTg5qTtYNkSazj
+      cmds:
+      - if [ ! -d "{{ .REPOPATH }}" ]; then git clone https://gitlab-ci-token:{{ .TOKEN }}@{{ .REPO }} {{ .REPOPATH }}; else cd {{ .REPOPATH }}; git pull; fi 
+  container:
+    name: pull-cn2
+    image: registry.default.svc.cluster1.local:5000/tasker
+    command: ["task", "-t","/var/task/task","clone"]
+    #command: ["sh","-c","while true;do sleep 10;done"]
+  
+
+
