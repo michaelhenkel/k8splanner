@@ -9,13 +9,15 @@ spec:
         REPO: ssd-git.juniper.net/contrail/cn2.git
         REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
         TOKEN: Ldp61SNTg5qTtYNkSazj
+        ARCHIVE: /mnt/builder/${PodNamespace}/${Plan}/archive.tar.bz2
+        PROJECTID: "4873"
+        COMMITID: 17050b0c26896c2c4be03226828a19dfcd7a5c26
       cmds:
-      - if [ ! -d "{{ .REPOPATH }}" ]; then git clone https://gitlab-ci-token:{{ .TOKEN }}@{{ .REPO }} {{ .REPOPATH }}; else cd {{ .REPOPATH }}; git pull; fi 
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}; fi
+      - curl --header "PRIVATE-TOKEN:{{ .TOKEN }}" "https://ssd-git.juniper.net/api/v4/projects/{{ .PROJECTID }}/repository/archive.tar.bz2?sha={{ .COMMITID }}" -o {{ .ARCHIVE }}
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/pkg" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/pkg; fi
   container:
     name: pull-cn2
     image: registry.default.svc.cluster1.local:5000/tasker
     command: ["task", "-t","/var/task/task","clone"]
     #command: ["sh","-c","while true;do sleep 10;done"]
-  
-
-

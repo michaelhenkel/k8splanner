@@ -6,18 +6,23 @@ spec:
   tasks:
     build:
       env:
-        GOPATH: /mnt/builder/${PodNamespace}/${Plan}
+        GOPATH: /root/go
         GOCACHE: /mnt/builder/.cache/go-build
       vars:
-        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+        GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
       cmds:
       - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "/mnt/builer/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builer/${PodNamespace}/${Plan}/out; fi
-      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builer/${PodNamespace}/${Plan}/out/contrail-k8s-controller cmd/manager/main.go
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/out; fi
+      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
+      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
+      - cp /mnt/builder/${PodNamespace}/${Plan}/archive.tar.bz2 /archive.tar.bz2
+      - tar -C {{ .REPOPATH }} --strip-components 1 -jxf /archive.tar.bz2
+      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/out/contrail-k8s-controller cmd/manager/main.go
       sources:
       - "{{ .REPOPATH }}/contrail/**/*.go"
       generates:
-      - /mnt/builer/${PodNamespace}/${Plan}/out/contrail-k8s-controller
+      - /mnt/builder/${PodNamespace}/${Plan}/out/contrail-k8s-controller
   container:
     name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
