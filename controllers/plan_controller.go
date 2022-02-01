@@ -128,29 +128,9 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	taskTotalCounter := 0
-	taskDoneCounter := 0
-	taskActiveCounter := 0
 	for _, stageStatus := range plan.Status.StageStatus {
 		taskTotalCounter = taskTotalCounter + len(stageStatus.TaskPhase)
-		for _, taskPhase := range stageStatus.TaskPhase {
-			if taskPhase.Phase == v1.FINISHED {
-				taskDoneCounter++
-			}
-			if taskPhase.Phase == v1.ACTIVE {
-				taskActiveCounter++
-			}
-		}
-	}
 
-	taskDone := fmt.Sprintf("%d/%d", taskDoneCounter, taskTotalCounter)
-	if plan.Status.TasksDone != taskDone {
-		plan.Status.TasksDone = taskDone
-		updateStatus = true
-	}
-
-	if plan.Status.TasksActive != taskActiveCounter {
-		plan.Status.TasksActive = taskActiveCounter
-		updateStatus = true
 	}
 
 	/*
@@ -163,10 +143,11 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	*/
 
 	doneStagesCounter := 0
+	taskDoneCounter := 0
+	taskActiveCounter := 0
 	if !init {
 		for _, stage := range plan.Spec.Stages {
 			if stageStatus, ok := plan.Status.StageStatus[stage.Name]; ok {
-
 				switch stageStatus.Phase {
 				case v1.INITIALIZED:
 					currentStageStatus := plan.Status.StageStatus[stage.Name]
@@ -190,6 +171,9 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 					if taskPhase.Phase != v1.FINISHED {
 						allTasksFinished = false
 					}
+					if taskPhase.Phase == v1.ACTIVE {
+						taskActiveCounter++
+					}
 				}
 				if allTasksFinished {
 					currentStageStatus := plan.Status.StageStatus[stage.Name]
@@ -200,6 +184,26 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				break
 			}
 		}
+		for _, stage := range plan.Spec.Stages {
+			if stageStatus, ok := plan.Status.StageStatus[stage.Name]; ok {
+				for _, taskPhase := range stageStatus.TaskPhase {
+					if taskPhase.Phase == v1.FINISHED {
+						taskDoneCounter++
+					}
+				}
+			}
+		}
+	}
+
+	taskDone := fmt.Sprintf("%d/%d", taskDoneCounter, taskTotalCounter)
+	if plan.Status.TasksDone != taskDone {
+		plan.Status.TasksDone = taskDone
+		updateStatus = true
+	}
+
+	if plan.Status.TasksActive != taskActiveCounter {
+		plan.Status.TasksActive = taskActiveCounter
+		updateStatus = true
 	}
 
 	doneStages := fmt.Sprintf("%d/%d", doneStagesCounter, len(plan.Spec.Stages))

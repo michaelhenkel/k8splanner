@@ -91,12 +91,12 @@ type TaskPhase struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="CurrentStage",type=string,JSONPath=`.status.currentStage`
-//+kubebuilder:printcolumn:name="StartTime",type=string,JSONPath=`.status.startTime`
-//+kubebuilder:printcolumn:name="CompletionTime",type=string,JSONPath=`.status.completionTime`
-//+kubebuilder:printcolumn:name="TasksActive",type=integer,JSONPath=`.status.tasksActive`
-//+kubebuilder:printcolumn:name="TasksDone",type=string,JSONPath=`.status.tasksDone`
-//+kubebuilder:printcolumn:name="StagesDone",type=string,JSONPath=`.status.stagesDone`
+//+kubebuilder:printcolumn:name="Current Stage",type=string,JSONPath=`.status.currentStage`
+//+kubebuilder:printcolumn:name="Start Time",type=string,JSONPath=`.status.startTime`
+//+kubebuilder:printcolumn:name="Completion Time",type=string,JSONPath=`.status.completionTime`
+//+kubebuilder:printcolumn:name="Tasks Active",type=integer,JSONPath=`.status.tasksActive`
+//+kubebuilder:printcolumn:name="Tasks Done",type=string,JSONPath=`.status.tasksDone`
+//+kubebuilder:printcolumn:name="Stages Done",type=string,JSONPath=`.status.stagesDone`
 // Plan is the Schema for the plans API
 type Plan struct {
 	metav1.TypeMeta   `json:",inline"`

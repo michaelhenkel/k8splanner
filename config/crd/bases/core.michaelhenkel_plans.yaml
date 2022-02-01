@@ -17,22 +17,22 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.currentStage
-      name: CurrentStage
+      name: Current Stage
       type: string
     - jsonPath: .status.startTime
-      name: StartTime
+      name: Start Time
       type: string
     - jsonPath: .status.completionTime
-      name: CompletionTime
+      name: Completion Time
       type: string
     - jsonPath: .status.tasksActive
-      name: TasksActive
+      name: Tasks Active
       type: integer
     - jsonPath: .status.tasksDone
-      name: TasksDone
+      name: Tasks Done
       type: string
     - jsonPath: .status.stagesDone
-      name: StagesDone
+      name: Stages Done
       type: string
     name: v1
     schema:
