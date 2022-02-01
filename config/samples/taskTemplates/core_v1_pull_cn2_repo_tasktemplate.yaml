@@ -1,5 +1,5 @@
 apiVersion: core.michaelhenkel/v1
-kind: Task
+kind: TaskTemplate
 metadata:
   name: pull-cn2
 spec:

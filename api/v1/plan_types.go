@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -77,6 +79,7 @@ type PlanStatus struct {
 	TasksActive    int                    `json:"tasksActive,omitempty"`
 	StartTime      *metav1.Time           `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
 	CompletionTime *metav1.Time           `json:"completionTime,omitempty" protobuf:"bytes,3,opt,name=completionTime"`
+	Duration       time.Duration          `json:"durations,omitempty" protobuf:"bytes,4,opt,name=duration"`
 }
 
 type StageStatus struct {
@@ -97,6 +100,7 @@ type TaskPhase struct {
 //+kubebuilder:printcolumn:name="Tasks Active",type=integer,JSONPath=`.status.tasksActive`
 //+kubebuilder:printcolumn:name="Tasks Done",type=string,JSONPath=`.status.tasksDone`
 //+kubebuilder:printcolumn:name="Stages Done",type=string,JSONPath=`.status.stagesDone`
+//+kubebuilder:printcolumn:name="Duration",type=string,JSONPath=`.status.duration`
 // Plan is the Schema for the plans API
 type Plan struct {
 	metav1.TypeMeta   `json:",inline"`

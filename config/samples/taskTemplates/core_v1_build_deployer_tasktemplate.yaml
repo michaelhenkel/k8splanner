@@ -1,7 +1,7 @@
 apiVersion: core.michaelhenkel/v1
-kind: Task
+kind: TaskTemplate
 metadata:
-  name: build-contrail-init
+  name: build-deployer
 spec:
   tasks:
     build:
@@ -13,20 +13,20 @@ spec:
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
       cmds:
       - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
+      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
       - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/contrail-init && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init main.go
+      - cd {{ .REPOPATH }}/deployer && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-deployer main.go
       sources:
-      - "{{ .REPOPATH }}/contrail-init/**/*.go"
+      - "{{ .REPOPATH }}/deployer/**/*.go"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-deployer
   container:
-    name: build-contrail-init
+    name: build-deployer
     image: registry.default.svc.cluster1.local:5000/tasker
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml build"]
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/deployer-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/deployer-task.yaml build"]
   
 
 

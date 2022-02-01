@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/ghodss/yaml"
 	batchv1 "k8s.io/api/batch/v1"
@@ -159,6 +160,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				task.Status.State = v1.RUNNING
 			} else if task.Status.Succeeded > 0 {
 				task.Status.State = v1.SUCCEEDED
+				if task.Status.CompletionTime != nil {
+					task.Status.Duration = time.Since(task.Status.CompletionTime.Time)
+				}
 			}
 			if err := r.Client.Status().Update(ctx, task, &client.UpdateOptions{}); err != nil {
 				return reconcile.Result{}, err

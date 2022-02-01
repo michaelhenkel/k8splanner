@@ -26,7 +26,6 @@ spec:
   container:
     name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
-    #command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml build"]
-    command: ["sh","-c","until cat /tmp/bla;do sleep 10;done"]
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml build"]
 
 

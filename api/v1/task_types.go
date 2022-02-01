@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +102,8 @@ type TaskStatus struct {
 	Failed int32 `json:"failed,omitempty" protobuf:"varint,6,opt,name=failed"`
 
 	// +optional
-	State RunningState `json:"state,omitempty" protobuf:"varint,7,opt,name=state"`
+	State    RunningState  `json:"state,omitempty" protobuf:"varint,7,opt,name=state"`
+	Duration time.Duration `json:"durations,omitempty" protobuf:"bytes,4,opt,name=duration"`
 }
 
 //+kubebuilder:object:root=true
@@ -110,6 +113,7 @@ type TaskStatus struct {
 //+kubebuilder:printcolumn:name="Active",type=integer,JSONPath=`.status.active`
 //+kubebuilder:printcolumn:name="Succeeded",type=integer,JSONPath=`.status.succeeded`
 //+kubebuilder:printcolumn:name="RunningState",type=string,JSONPath=`.status.runningState`
+//+kubebuilder:printcolumn:name="Duration",type=string,JSONPath=`.status.duration`
 //Task is the Schema for the tasks API
 type Task struct {
 	metav1.TypeMeta   `json:",inline"`

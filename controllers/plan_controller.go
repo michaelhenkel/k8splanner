@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"time"
 
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -221,6 +222,7 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if stageStatusFinishedCounter == len(plan.Spec.Stages) {
 		completionTime := metav1.Now()
 		plan.Status.CompletionTime = &completionTime
+		plan.Status.Duration = time.Since(plan.Status.StartTime.Time)
 		updateStatus = true
 	}
 

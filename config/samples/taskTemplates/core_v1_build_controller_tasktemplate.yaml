@@ -1,7 +1,7 @@
 apiVersion: core.michaelhenkel/v1
-kind: Task
+kind: TaskTemplate
 metadata:
-  name: build-deployer
+  name: build-controller
 spec:
   tasks:
     build:
@@ -18,15 +18,12 @@ spec:
       - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/deployer && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-deployer main.go
+      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-controller cmd/manager/main.go
       sources:
-      - "{{ .REPOPATH }}/deployer/**/*.go"
+      - "{{ .REPOPATH }}/contrail/**/*.go"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-deployer
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-controller
   container:
-    name: build-deployer
+    name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/deployer-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/deployer-task.yaml build"]
-  
-
-
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/controller-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/controller-task.yaml build"]

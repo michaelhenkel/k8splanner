@@ -1,0 +1,32 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: build-vrouter-kernel
+spec:
+  tasks:
+    build:
+      env:
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
+      - if [ ! -d "/mnt/builder/.cache/ccache" ]; then mkdir -p /mnt/builder/.cache/ccache; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/{{ .KERNELVERSION }}" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/{{ .KERNELVERSION }}; fi
+      - if [ ! -L "/tf-dev-env/tools" ]; then ln -s ${REPOPATH}/tools /tf-dev-env/tools; fi
+      - if [ ! -d "/tf-dev-env/vrouter" ]; then cp -r ${REPOPATH}/vrouter /tf-dev-env/vrouter; fi
+      - if [ ! -L "/tf-dev-env/src" ]; then ln -s ${REPOPATH}/src /tf-dev-env/src; fi
+      - if [ ! -L "/tf-dev-env/SConstruct" ]; then ln -s ${REPOPATH}/SConstruct /tf-dev-env/SConstruct; fi
+      - if [ ! -L "/tf-dev-env/controller" ]; then ln -s ${REPOPATH}/tools/controller /tf-dev-env/controller; fi
+      - update-alternatives --set gcc /usr/bin/gcc-{{ .GCC }}
+      - cd /tf-dev-env && scons --kernel-dir=$(cat /kernelpath) --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) vrouter/vrouter.ko
+      - strip /tf-dev-env/vrouter/vrouter.ko
+      - cp /tf-dev-env/vrouter/vrouter.ko /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/{{ .KERNELVERSION }}/vrouter.ko
+  container:
+    name: build-vrouter-kernel
+    image: "registry.default.svc.cluster1.local:5000/kernel-builder:{{ .KERNELVERSION }}"
+    command: ["sh","-c","task -t /var/task/task build"]
+    #command: ["sh","-c","until cat /tmp/bla; do sleep 10;done"]
+    resources:
+      requests:
+        cpu: "20"
