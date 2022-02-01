@@ -1,7 +1,7 @@
 apiVersion: core.michaelhenkel/v1
 kind: Task
 metadata:
-  name: build-control-node
+  name: build-vrouter-agent
 spec:
   tasks:
     build:
@@ -22,17 +22,19 @@ spec:
       - cp -r /tf-dev-env/third_party/* {{ .REPOPATH }}/third_party/
       - rm -rf {{ .REPOPATH }}/build
       - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) control-node
-      - cp {{ .REPOPATH }}/build/production/control-node/contrail-control /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
-      - strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
+      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) contrail-vrouter-agent
+      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) vrouter/utils
+      - cp {{ .REPOPATH }}/build/production/vnsw/agent/contrail/contrail-vrouter-agent /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
+      - strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
+      - for i in vif nh flow mpls mirror vxlan rt dropstats vrfstats vrinfo vrmemstats vrftable vrouter dpdkinfo dpdkconf qosmap; do cp {{ .REPOPATH }}/build/production/vrouter/utils/${i} /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; done
       sources:
       - "/tf-dev-env/**/*.cc"
       - "/tf-dev-env/**/*.c"
       - "/tf-dev-env/**/*.h"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
   container:
-    name: build-control-node
+    name: build-vrouter-agent
     image: registry.default.svc.cluster1.local:5000/c-builder:latest
     #command: ["sh","-c","while true;do sleep 10;done"]
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/control-node-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/control-node-task.yaml build"]
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml build"]

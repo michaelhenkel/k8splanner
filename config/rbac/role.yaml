@@ -6,9 +6,68 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/finalizers
+  - pods/finalizers
+  - secrets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  - pods/status
+  - secrets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - core.michaelhenkel
   resources:
   - plans
+  - tasks
   verbs:
   - create
   - delete
@@ -21,12 +80,40 @@ rules:
   - core.michaelhenkel
   resources:
   - plans/finalizers
+  - tasks/finalizers
   verbs:
   - update
 - apiGroups:
   - core.michaelhenkel
   resources:
   - plans/status
+  - tasks/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.michaelhenkel
+  resources:
+  - tasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.michaelhenkel
+  resources:
+  - tasks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.michaelhenkel
+  resources:
+  - tasks/status
   verbs:
   - get
   - patch

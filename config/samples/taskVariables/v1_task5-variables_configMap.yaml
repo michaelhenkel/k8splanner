@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task5-variables
+  namespace: default
+data:
+  vars: |
+    - KERNEL: 123
+      GCC: 4.8
+    - KERNEL: 456
+      GCC: 4.9

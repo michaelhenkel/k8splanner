@@ -1,9 +1,8 @@
 package predicates
 
 import (
-	"reflect"
+	v1 "michaelhenkel/k8splanner/api/v1"
 
-	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -11,31 +10,26 @@ import (
 
 // PodIPChangedPredicate implements a default update predicate function on
 // PodIP status state change.
-type JobStatusChangePredicate struct {
+type TaskStatusChangePredicate struct {
 	predicate.Funcs
 	Scheme *runtime.Scheme
 }
 
 // Update implements default UpdateEvent filter for validating state change
-func (p JobStatusChangePredicate) Update(e event.UpdateEvent) bool {
+func (p TaskStatusChangePredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil {
 		return false
 	}
-	oldJob, ok := e.ObjectOld.(*batchv1.Job)
+	oldTask, ok := e.ObjectOld.(*v1.Task)
 	if !ok {
 		return false
 	}
 	if e.ObjectNew == nil {
 		return false
 	}
-	newJob, ok := e.ObjectNew.(*batchv1.Job)
+	newTask, ok := e.ObjectNew.(*v1.Task)
 	if !ok {
 		return false
 	}
-	if _, ok := newJob.Labels["k8splanner"]; ok {
-		if !reflect.DeepEqual(oldJob.Status, newJob.Status) {
-			return true
-		}
-	}
-	return false
+	return oldTask.Status.State != newTask.Status.State
 }

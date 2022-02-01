@@ -1,0 +1,6 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: tasktemplate-sample
+spec:
+  # TODO(user): Add fields here

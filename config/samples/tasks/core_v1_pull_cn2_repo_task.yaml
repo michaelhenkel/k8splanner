@@ -6,15 +6,10 @@ spec:
   tasks:
     clone:
       vars:
-        REPO: ssd-git.juniper.net/contrail/cn2.git
-        REPOPATH: /mnt/builder/${PodNamespace}/${Plan}/src/ssd-git.juniper.net/contrail/cn2
-        TOKEN: Ldp61SNTg5qTtYNkSazj
-        ARCHIVE: /mnt/builder/${PodNamespace}/${Plan}/archive.tar.bz2
-        PROJECTID: "4873"
-        COMMITID: 17050b0c26896c2c4be03226828a19dfcd7a5c26
+        ARCHIVE: /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz
       cmds:
-      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}; fi
-      - curl --header "PRIVATE-TOKEN:{{ .TOKEN }}" "https://ssd-git.juniper.net/api/v4/projects/{{ .PROJECTID }}/repository/archive.tar.bz2?sha={{ .COMMITID }}" -o {{ .ARCHIVE }}
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}; fi
+      - curl --header "PRIVATE-TOKEN:$(cat /var/token/token)" "https://ssd-git.juniper.net/api/v4/projects/contrail%2Fcn2/repository/archive?sha=${Branch}" -o {{ .ARCHIVE }}
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/pkg" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/pkg; fi
   container:
     name: pull-cn2

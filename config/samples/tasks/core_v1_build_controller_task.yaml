@@ -13,20 +13,17 @@ spec:
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
       cmds:
       - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/out; fi
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
       - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
       - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - cp /mnt/builder/${PodNamespace}/${Plan}/archive.tar.bz2 /archive.tar.bz2
-      - tar -C {{ .REPOPATH }} --strip-components 1 -jxf /archive.tar.bz2
-      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/out/contrail-k8s-controller cmd/manager/main.go
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
+      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
+      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-controller cmd/manager/main.go
       sources:
       - "{{ .REPOPATH }}/contrail/**/*.go"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/out/contrail-k8s-controller
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-controller
   container:
     name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
     command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/controller-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/controller-task.yaml build"]
-  
-
-

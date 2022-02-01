@@ -15,7 +15,26 @@ spec:
     singular: plan
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.currentStage
+      name: CurrentStage
+      type: string
+    - jsonPath: .status.startTime
+      name: StartTime
+      type: string
+    - jsonPath: .status.completionTime
+      name: CompletionTime
+      type: string
+    - jsonPath: .status.tasksActive
+      name: TasksActive
+      type: integer
+    - jsonPath: .status.tasksDone
+      name: TasksDone
+      type: string
+    - jsonPath: .status.stagesDone
+      name: StagesDone
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: Plan is the Schema for the plans API
@@ -35,6 +54,8 @@ spec:
           spec:
             description: PlanSpec defines the desired state of Plan
             properties:
+              branch:
+                type: string
               stages:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
@@ -42,11 +63,8 @@ spec:
                   properties:
                     name:
                       type: string
-                    taskReferences:
+                    taskTemplateReferences:
                       items:
-                        description: TypedLocalObjectReference contains enough information
-                          to let you locate the typed referenced object inside the
-                          same namespace.
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -60,6 +78,26 @@ spec:
                           name:
                             description: Name is the name of resource being referenced
                             type: string
+                          taskVariables:
+                            properties:
+                              apiGroup:
+                                description: APIGroup is the group for the resource
+                                  being referenced. If APIGroup is not specified,
+                                  the specified Kind must be in the core API group.
+                                  For any other third-party types, APIGroup is required.
+                                type: string
+                              key:
+                                type: string
+                              kind:
+                                description: Kind is the type of resource being referenced
+                                type: string
+                              name:
+                                description: Name is the name of resource being referenced
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
                         required:
                         - kind
                         - name
@@ -67,6 +105,10 @@ spec:
                       type: array
                   type: object
                 type: array
+              token:
+                type: string
+              tokenSecret:
+                type: string
               volume:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
@@ -1511,12 +1553,11 @@ spec:
                 type: object
             type: object
           status:
-            description: PlanStatus defines the observed state of Plan
+            description: '`json:",inline" protobuf:"bytes,1,opt,name=objectReference"`
+              PlanStatus defines the observed state of Plan'
             properties:
-              condition:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
+              completionTime:
+                format: date-time
                 type: string
               currentStage:
                 type: string
@@ -1535,7 +1576,19 @@ spec:
                         type: object
                       type: object
                   type: object
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
                 type: object
+              stagesDone:
+                type: string
+              startTime:
+                format: date-time
+                type: string
+              tasksActive:
+                type: integer
+              tasksDone:
+                type: string
             type: object
         type: object
     served: true

@@ -1,0 +1,33 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: plan1
+spec:
+  tokenSecret: gitlabtoken
+  branch: no_dhcp
+  stages:
+  - name: stage1
+    taskTemplateReferences:
+    - name: task1
+      kind: TaskTemplate
+    - name: task2
+      kind: TaskTemplate
+  - name: stage2
+    taskTemplateReferences:
+    - name: task3
+      kind: TaskTemplate
+    - name: task4
+      kind: TaskTemplate
+  - name: stage3
+    taskTemplateReferences:
+    - name: task5
+      kind: TaskTemplate
+      taskVariables:
+        name: task5-variables
+        kind: ConfigMap
+        key: vars
+  volume:
+    name: builder
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder

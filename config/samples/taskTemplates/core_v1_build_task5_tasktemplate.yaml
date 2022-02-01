@@ -1,11 +1,8 @@
 apiVersion: core.michaelhenkel/v1
-kind: Task
+kind: TaskTemplate
 metadata:
-  name: build-apiserver
-  labels:
-    Plan: plan123
+  name: task5
 spec:
-  run: false
   tasks:
     build:
       env:
@@ -15,13 +12,8 @@ spec:
         REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
       cmds:
-      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
-      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
-      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver cmd/apiserver/main.go
+      - "{{ .KERNEL }}"
+      - "{{ .GCC }}"
       sources:
       - "{{ .REPOPATH }}/contrail/**/*.go"
       generates:

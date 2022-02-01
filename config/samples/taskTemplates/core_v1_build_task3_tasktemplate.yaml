@@ -1,7 +1,7 @@
 apiVersion: core.michaelhenkel/v1
-kind: Task
+kind: TaskTemplate
 metadata:
-  name: build-contrail-init
+  name: task3
 spec:
   tasks:
     build:
@@ -15,18 +15,18 @@ spec:
       - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
       - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/contrail-init && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init main.go
+      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver cmd/apiserver/main.go
       sources:
-      - "{{ .REPOPATH }}/contrail-init/**/*.go"
+      - "{{ .REPOPATH }}/contrail/**/*.go"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver
   container:
-    name: build-contrail-init
+    name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/contrail-init-task.yaml build"]
-  
+    #command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml build"]
+    command: ["sh","-c","until cat /tmp/bla;do sleep 10;done"]
 
 

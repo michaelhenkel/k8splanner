@@ -3,27 +3,39 @@ kind: Plan
 metadata:
   name: build-cn2
 spec:
+  tokenSecret: gitlabtoken
+  branch: no_dhcp
   stages:
-  - name: pullrepo
-    taskReferences:
-    - name: pull-cn2
-      kind: Task
+  #- name: pullrepo
+  #  taskReferences:
+  #  - name: pull-cn2
+  #    kind: Task
   - name: build
-    taskReferences:
-    - name: build-apiserver
-      kind: Task
-    - name: build-controller
-      kind: Task
-    - name: build-kubemanager
-      kind: Task
-    - name: build-deployer
-      kind: Task
-    - name: build-contrail-init
-      kind: Task
-    - name: build-vrouter-go
-      kind: Task
-    - name: build-control-node
-      kind: Task
+    taskTemplates:
+    - taskReference:
+        name: build-vrouter-kernel-template
+        kind: Task
+      source: vrouter-kernel-list
+      taskPrefix: vrouter-kernel
+    #taskReferences:
+    #- name: build-apiserver
+    #  kind: Task
+    #- name: build-controller
+    #  kind: Task
+    #- name: build-kubemanager
+    #  kind: Task
+    #- name: build-deployer
+    #  kind: Task
+    #- name: build-contrail-init
+    #  kind: Task
+    #- name: build-vrouter-go
+    #  kind: Task
+    #- name: build-control-node
+    #  kind: Task
+    #- name: build-vrouter-agent
+    #  kind: Task
+    #- name: build-vrouter-kernel
+    #  kind: Task
   volume:
     name: builder
     glusterfs:

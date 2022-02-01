@@ -30,10 +30,9 @@ const (
 	TGZ         RepositoryType = "tgz"
 	INITIALIZED Phase          = "initialized"
 	STARTED     Phase          = "started"
-	RUNNING     Phase          = "running"
+	ACTIVE      Phase          = "active"
 	FINISHED    Phase          = "finished"
 	SUCCESS     StageState     = "success"
-	FAILED      StageState     = "failed"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -43,22 +42,41 @@ const (
 type PlanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Stages []Stage        `json:"stages,omitempty"`
-	Volume *corev1.Volume `json:"volume,omitempty"`
+	Stages      []Stage        `json:"stages,omitempty"`
+	Volume      *corev1.Volume `json:"volume,omitempty"`
+	Branch      string         `json:"branch,omitempty"`
+	Token       string         `json:"token,omitempty"`
+	TokenSecret string         `json:"tokenSecret,omitempty"`
 }
 
 type Stage struct {
-	Name           string                             `json:"name,omitempty"`
-	TaskReferences []corev1.TypedLocalObjectReference `json:"taskReferences,omitempty"`
+	Name                   string                  `json:"name,omitempty"`
+	TaskTemplateReferences []TaskTemplateReference `json:"taskTemplateReferences,omitempty"`
+	//TaskTemplates          []TaskTemplate                     `json:"taskTemplates,omitempty"`
 }
 
+type TaskTemplateReference struct {
+	corev1.TypedLocalObjectReference `json:",inline"`
+	TaskVariables                    *TaskVariable `json:"taskVariables,omitempty"`
+}
+
+type TaskVariable struct {
+	corev1.TypedLocalObjectReference `json:",inline"`
+	Key                              string `json:"key,omitempty"`
+}
+
+//`json:",inline" protobuf:"bytes,1,opt,name=objectReference"`
 // PlanStatus defines the observed state of Plan
 type PlanStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Condition    string                 `json:"condition,omitempty"`
-	StageStatus  map[string]StageStatus `json:"stageStatus,omitempty"`
-	CurrentStage string                 `json:"currentStage,omitempty"`
+	StageStatus    map[string]StageStatus `json:"stageStatus,omitempty"`
+	CurrentStage   string                 `json:"currentStage,omitempty"`
+	StagesDone     string                 `json:"stagesDone,omitempty"`
+	TasksDone      string                 `json:"tasksDone,omitempty"`
+	TasksActive    int                    `json:"tasksActive,omitempty"`
+	StartTime      *metav1.Time           `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
+	CompletionTime *metav1.Time           `json:"completionTime,omitempty" protobuf:"bytes,3,opt,name=completionTime"`
 }
 
 type StageStatus struct {
@@ -73,7 +91,12 @@ type TaskPhase struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-
+//+kubebuilder:printcolumn:name="CurrentStage",type=string,JSONPath=`.status.currentStage`
+//+kubebuilder:printcolumn:name="StartTime",type=string,JSONPath=`.status.startTime`
+//+kubebuilder:printcolumn:name="CompletionTime",type=string,JSONPath=`.status.completionTime`
+//+kubebuilder:printcolumn:name="TasksActive",type=integer,JSONPath=`.status.tasksActive`
+//+kubebuilder:printcolumn:name="TasksDone",type=string,JSONPath=`.status.tasksDone`
+//+kubebuilder:printcolumn:name="StagesDone",type=string,JSONPath=`.status.stagesDone`
 // Plan is the Schema for the plans API
 type Plan struct {
 	metav1.TypeMeta   `json:",inline"`
