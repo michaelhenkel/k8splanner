@@ -7,23 +7,28 @@ spec:
     build:
       env:
         GOPATH: /root/go
-        CCACHE_DIR: /mnt/builder/.cache/ccache
+        CCACHE_DIR: /mnt/buildcache/.cache/ccache
+        BUILDPATH: /mnt/buildcache/build
         GOCACHE: /mnt/builder/.cache/go-build
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
-      vars:
+        GOPKGCACHE: /mnt/buildcache/pkg
         REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
       cmds:
-      - if [ ! -d "/mnt/builder/.cache/ccache" ]; then mkdir -p /mnt/builder/.cache/ccache; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
+      - if [ ! -d "${CCACHE_DIR}" ]; then mkdir -p ${CCACHE_DIR}; fi
+      - if [ ! -d "${GOCACHE}" ]; then mkdir -p ${GOCACHE}; fi
+      - if [ ! -d "${GOPKGCACHE}" ]; then mkdir -p ${GOPKGCACHE}; fi
+      - if [ ! -d "${BUILDPATH}" ]; then mkdir -p ${BUILDPATH}; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/build" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/build; fi
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
-      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - cp -r /tf-dev-env/third_party/* {{ .REPOPATH }}/third_party/
-      - rm -rf {{ .REPOPATH }}/build
-      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) control-node
-      - cp {{ .REPOPATH }}/build/production/control-node/contrail-control /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
+      - cp -r /tf-dev-env/third_party/* ${REPOPATH}/third_party/
+      - rm -rf ${REPOPATH}/build
+      - ln -s ${GOPKGCACHE} /root/go/pkg
+      - if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi
+      - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production -j16 control-node
+      - cp ${REPOPATH}/build/production/control-node/contrail-control /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
       - strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
       sources:
       - "/tf-dev-env/**/*.cc"

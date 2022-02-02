@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vrouter-kernels
+  namespace: test
+data:
+  vars: |
+    - KERNELVERSION: 5.4.0-88-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-89-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-90-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-94-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-97-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-81-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-86-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-91-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-92-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-96-generic
+      GCC: 7
+    - KERNELVERSION: 5.4.0-84-generic
+      GCC: 7
+    - KERNELVERSION: 4.18.0-348.7.1.el8_5.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.18.0-348.el8.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.18.0-348.2.1.el8_5.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.18.0-305.28.1.el8_4.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.18.0-305.30.1.el8_4.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.18.0-305.34.2.el8_4.x86_64
+      GCC: 7
+    - KERNELVERSION: 4.19.202
+      GCC: 7
+    - KERNELVERSION: 4.19.182
+      GCC: 7

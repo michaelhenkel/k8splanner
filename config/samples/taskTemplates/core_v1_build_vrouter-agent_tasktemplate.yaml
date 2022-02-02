@@ -7,26 +7,32 @@ spec:
     build:
       env:
         GOPATH: /root/go
-        CCACHE_DIR: /mnt/builder/.cache/ccache
+        CCACHE_DIR: /mnt/buildcache/.cache/ccache
+        BUILDPATH: /mnt/buildcache/build
         GOCACHE: /mnt/builder/.cache/go-build
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
-      vars:
+        GOPKGCACHE: /mnt/buildcache/pkg
         REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
       cmds:
-      - if [ ! -d "/mnt/builder/.cache/ccache" ]; then mkdir -p /mnt/builder/.cache/ccache; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
+      - if [ ! -d "${CCACHE_DIR}" ]; then mkdir -p ${CCACHE_DIR}; fi
+      - if [ ! -d "${GOCACHE}" ]; then mkdir -p ${GOCACHE}; fi
+      - if [ ! -d "${GOPKGCACHE}" ]; then mkdir -p ${GOPKGCACHE}; fi
+      - if [ ! -d "${BUILDPATH}" ]; then mkdir -p ${BUILDPATH}; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/build" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/build; fi
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
-      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - cp -r /tf-dev-env/third_party/* {{ .REPOPATH }}/third_party/
-      - rm -rf {{ .REPOPATH }}/build
-      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) contrail-vrouter-agent
-      - cd {{ .REPOPATH }} && scons --c++=c++11 --opt=production -j$(grep -c ^processor /proc/cpuinfo) vrouter/utils
-      - cp {{ .REPOPATH }}/build/production/vnsw/agent/contrail/contrail-vrouter-agent /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
+      - cp -r /tf-dev-env/third_party/* ${REPOPATH}/third_party/
+      - rm -rf ${REPOPATH}/build
+      #- ln -s ${BUILDPATH} ${REPOPATH}/build
+      - ln -s ${GOPKGCACHE} /root/go/pkg
+      - if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi
+      - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production ${cpus} contrail-vrouter-agent
+      - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production ${cpus} vrouter/utils
+      - cp ${REPOPATH}/build/production/vnsw/agent/contrail/contrail-vrouter-agent /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
       - strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-vrouter-agent
-      - for i in vif nh flow mpls mirror vxlan rt dropstats vrfstats vrinfo vrmemstats vrftable vrouter dpdkinfo dpdkconf qosmap; do cp {{ .REPOPATH }}/build/production/vrouter/utils/${i} /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; done
+      - for i in vif nh flow mpls mirror vxlan rt dropstats vrfstats vrinfo vrmemstats vrftable vrouter dpdkinfo dpdkconf qosmap; do cp ${REPOPATH}/build/production/vrouter/utils/${i} /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i}; done
       sources:
       - "/tf-dev-env/**/*.cc"
       - "/tf-dev-env/**/*.c"

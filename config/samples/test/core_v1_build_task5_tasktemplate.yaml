@@ -15,7 +15,7 @@ spec:
       - "{{ .KERNEL }}"
       - "{{ .GCC }}"
       sources:
-      - "{{ .REPOPATH }}/contrail/**/*.go"
+      - "${REPOPATH}/contrail/**/*.go"
       generates:
       - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver
   container:

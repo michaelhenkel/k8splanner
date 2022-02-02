@@ -1,0 +1,72 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: build-go
+spec:
+  tokenSecret: gitlabtoken
+  branch: pipeline
+  stages:
+  - name: pull
+    taskTemplateReferences:
+    - name: pull-cn2
+      kind: TaskTemplate
+  - name: build
+    taskTemplateReferences:
+    - name: build-apiserver
+    - name: build-controller
+    - name: build-kubemanager
+    - name: build-deployer
+    - name: build-contrail-init
+    - name: build-vrouter-go
+    - name: build-vrouter-supervisor
+  - name: publish
+    taskTemplateReferences:
+    - name: publish-go
+      taskName: apiserver
+      taskVariableMap:
+        BINARY: contrail-k8s-apiserver
+        IMAGENAME: contrail-k8s-apiserver
+    - name: publish-go
+      taskName: controller
+      taskVariableMap:
+        BINARY: contrail-k8s-controller
+        IMAGENAME: contrail-k8s-controller
+    - name: publish-go
+      taskName: contrail-init
+      taskVariableMap:
+        BINARY: contrail-init
+        IMAGENAME: contrail-init
+    - name: publish-go
+      taskName: contrail-watch
+      taskVariableMap:
+        BINARY: contrail-init
+        IMAGENAME: contrail-watch
+    - name: publish-go
+      taskName: deployer
+      taskVariableMap:
+        BINARY: contrail-k8s-deployer
+        IMAGENAME: contrail-k8s-deployer
+    - name: publish-go
+      taskName: kubemanager
+      taskVariableMap:
+        BINARY: contrail-k8s-kubemanager
+        IMAGENAME: contrail-k8s-kubemanager
+    - name: publish-go
+      taskName: vrouter-go
+      taskVariableMap:
+        BINARY: contrail-k8s-deployer
+        IMAGENAME: contrail-k8s-deployer
+    - name: publish-go
+      taskName: vrouter-supervisor
+      taskVariableMap:
+        BINARY: vrouter-supervisor
+        IMAGENAME: vrouter-supervisor
+  volumes:
+  - name: builder
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder
+  - name: buildcache
+    hostPath:
+      path: /glusterfs/buildcache
+      type: Directory

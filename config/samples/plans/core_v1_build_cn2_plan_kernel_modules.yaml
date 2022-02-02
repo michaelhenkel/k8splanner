@@ -1,0 +1,36 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: build-go
+spec:
+  tokenSecret: gitlabtoken
+  branch: master
+  stages:
+  - name: pull
+    taskTemplateReferences:
+    - name: pull-cn2
+      kind: TaskTemplate
+  - name: build
+    taskTemplateReferences:
+    - name: build-vrouter-kernel
+      taskVariables:
+        name: vrouter-kernels
+        key: vars
+  - name: publish
+    taskTemplateReferences:
+    - name: publish-kernel-modules
+      taskVariables:
+        name: vrouter-kernels
+        key: vars
+      taskVariableMap:
+        BINARY: contrail-k8s-apiserver
+        IMAGENAME: contrail-k8s-apiserver
+  volumes:
+  - name: builder
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder
+  - name: buildcache
+    hostPath:
+      path: /glusterfs/buildcache
+      type: Directory

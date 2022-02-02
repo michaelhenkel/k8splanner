@@ -1,0 +1,47 @@
+apiVersion: core.michaelhenkel/v1
+kind: Plan
+metadata:
+  name: test-cn2
+spec:
+  tokenSecret: gitlabtoken
+  branch: no_dhcp
+  stages:
+  - name: pull
+    taskTemplateReferences:
+    - name: pull-cn2
+      kind: TaskTemplate
+  - name: build
+    taskTemplateReferences:
+    - name: build-apiserver
+      kind: TaskTemplate
+    - name: build-controller
+      kind: TaskTemplate
+    - name: build-kubemanager
+      kind: TaskTemplate
+    - name: build-deployer
+      kind: TaskTemplate
+    - name: build-contrail-init
+      kind: TaskTemplate
+    - name: build-vrouter-go
+      kind: TaskTemplate
+    - name: build-control-node
+      kind: TaskTemplate
+      cpuLimit: 12
+    - name: build-vrouter-agent
+      kind: TaskTemplate
+      cpuLimit: 12
+    - name: build-vrouter-kernel
+      kind: TaskTemplate
+      taskVariables:
+        name: vrouter-kernels
+        kind: ConfigMap
+        key: vars
+  volumes:
+  - name: builder
+    glusterfs:
+      endpoints: glusterfs-cluster
+      path: builder
+  - name: buildcache
+    hostPath:
+      path: /glusterfs/buildcache
+      type: Directory

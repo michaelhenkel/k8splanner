@@ -7,20 +7,21 @@ spec:
     build:
       env:
         GOPATH: /root/go
-        GOCACHE: /mnt/builder/.cache/go-build
-      vars:
+        GOCACHE: /mnt/buildcache/.cache/go-build
+        GOPKGCACHE: /mnt/buildcache/pkg
         REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
       cmds:
-      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
+      - if [ ! -d "${GOCACHE}" ]; then mkdir -p ${GOCACHE}; fi
+      - if [ ! -d "${GOPKGCACHE}" ]; then mkdir -p ${GOPKGCACHE}; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
-      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
-      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/contrail-init && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init main.go
+      - ln -s ${GOPKGCACHE} /root/go/pkg
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
+      - cd ${REPOPATH}/contrail-init && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init main.go
       sources:
-      - "{{ .REPOPATH }}/contrail-init/**/*.go"
+      - "${REPOPATH}/contrail-init/**/*.go"
       generates:
       - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-init
   container:

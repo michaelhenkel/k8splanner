@@ -7,25 +7,27 @@ spec:
     build:
       env:
         GOPATH: /root/go
-        GOCACHE: /mnt/builder/.cache/go-build
-      vars:
-        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+        GOCACHE: /mnt/buildcache/.cache/go-build
+        GOPKGCACHE: /mnt/buildcache/pkg
         GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
       cmds:
-      - if [ ! -d "/mnt/builder/.cache/go-build" ]; then mkdir -p /mnt/builder/.cache/go-build; fi
-      - if [ ! -d "{{ .REPOPATH }}" ]; then mkdir -p {{ .REPOPATH }}; fi
+      - if [ ! -d "${GOCACHE}" ]; then mkdir -p ${GOCACHE}; fi
+      - if [ ! -d "${GOPKGCACHE}" ]; then mkdir -p ${GOPKGCACHE}; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
-      - ln -s /mnt/builder/${PodNamespace}/${Plan}/pkg /root/go/pkg
+      - ln -s ${GOPKGCACHE} /root/go/pkg
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
-      - tar -C {{ .REPOPATH }} --strip-components 1 -zxf /archive.tar.gz
-      - cd {{ .REPOPATH }}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver cmd/apiserver/main.go
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
+      - cd ${REPOPATH}/contrail && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver cmd/apiserver/main.go
       sources:
-      - "{{ .REPOPATH }}/contrail/**/*.go"
+      - "${REPOPATH}/contrail/**/*.go"
       generates:
       - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-apiserver
   container:
     name: build-apiserver
     image: registry.default.svc.cluster1.local:5000/tasker
+    #command: ["sh","-c","until cat /tmp/bla; do sleep 10;done"]
     command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/apiserver-task.yaml build"]
 
 

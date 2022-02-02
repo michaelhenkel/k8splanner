@@ -10,7 +10,7 @@ spec:
       cmds:
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}; fi
       - curl --header "PRIVATE-TOKEN:$(cat /var/token/token)" "https://ssd-git.juniper.net/api/v4/projects/contrail%2Fcn2/repository/archive?sha=${Branch}" -o {{ .ARCHIVE }}
-      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/pkg" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/pkg; fi
+      - if [ ! -d "/mnt/builder/pkg" ]; then mkdir -p /mnt/builder/pkg; fi
   container:
     name: pull-cn2
     image: registry.default.svc.cluster1.local:5000/tasker

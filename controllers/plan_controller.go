@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"time"
 
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,15 +133,6 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	}
 
-	/*
-		if updateStatus {
-			if err := r.Client.Status().Update(ctx, plan, &client.UpdateOptions{}); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
-		}
-	*/
-
 	doneStagesCounter := 0
 	taskDoneCounter := 0
 	taskActiveCounter := 0
@@ -219,10 +209,12 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			stageStatusFinishedCounter++
 		}
 	}
-	if stageStatusFinishedCounter == len(plan.Spec.Stages) {
+	if stageStatusFinishedCounter == len(plan.Spec.Stages) && plan.Status.CompletionTime == nil {
 		completionTime := metav1.Now()
 		plan.Status.CompletionTime = &completionTime
-		plan.Status.Duration = time.Since(plan.Status.StartTime.Time)
+		timeNow := metav1.Now()
+		duration := timeNow.Sub(plan.Status.StartTime.Time)
+		plan.Status.Duration = duration.String()
 		updateStatus = true
 	}
 
@@ -236,8 +228,12 @@ func (r *PlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 func (r *PlanReconciler) createTasks(ctx context.Context, TaskTemplateReferences []v1.TaskTemplateReference, plan *v1.Plan, req ctrl.Request, stageName string, tokenSecret *corev1.Secret) error {
 	for _, taskTemplateRef := range TaskTemplateReferences {
+		namespace := req.Namespace
+		if taskTemplateRef.Namespace != "" {
+			namespace = taskTemplateRef.Namespace
+		}
 		taskTemplate := &v1.TaskTemplate{}
-		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskTemplateRef.Name, Namespace: req.Namespace}, taskTemplate); err != nil {
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskTemplateRef.Name, Namespace: namespace}, taskTemplate); err != nil {
 			klog.Error("task reference %s not found", taskTemplateRef.Name)
 			return err
 		}
@@ -247,18 +243,27 @@ func (r *PlanReconciler) createTasks(ctx context.Context, TaskTemplateReferences
 		}
 		var taskList []v1.Task
 		taskVariableConfigMap := &corev1.ConfigMap{}
-		if taskTemplateRef.TaskVariables != nil {
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: plan.Namespace, Name: taskTemplateRef.TaskVariables.Name}, taskVariableConfigMap); err != nil {
+		if taskTemplateRef.TaskVariableConfigMap != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: plan.Namespace, Name: taskTemplateRef.TaskVariableConfigMap.Name}, taskVariableConfigMap); err != nil {
 				return err
 			}
-			if taskVariableData, ok := taskVariableConfigMap.Data[taskTemplateRef.TaskVariables.Key]; ok {
+			if taskVariableData, ok := taskVariableConfigMap.Data[taskTemplateRef.TaskVariableConfigMap.Key]; ok {
 				var taskVariableDataMap []map[string]interface{}
 				if err := yaml.Unmarshal([]byte(taskVariableData), &taskVariableDataMap); err != nil {
 					return err
 				}
 				for idx, taskVariable := range taskVariableDataMap {
-					taskName := fmt.Sprintf("%s-%s-%s-%d", plan.Name, stageName, taskTemplateRef.Name, idx)
-					task := r.defineTasks(taskName, plan.Namespace, plan.Name, branch, plan.Spec.TokenSecret, taskTemplate.Spec.Tasks, taskTemplate.Spec.Container, plan.Spec.Volume)
+					taskRefName := taskTemplateRef.Name
+					if taskTemplateRef.TaskName != "" {
+						taskRefName = taskTemplateRef.TaskName
+					}
+					taskName := fmt.Sprintf("%s-%s-%s-%d", plan.Name, stageName, taskRefName, idx)
+					task := r.defineTasks(taskName, plan.Namespace, plan.Name, branch, plan.Spec.TokenSecret, taskTemplate.Spec.Tasks, taskTemplate.Spec.Container, plan.Spec.Volumes, taskTemplateRef.CPURequest, taskTemplateRef.CPULimit)
+					if taskTemplateRef.TaskVariablesMap != nil {
+						for varKey, varValue := range taskTemplateRef.TaskVariablesMap {
+							taskVariable[varKey] = varValue
+						}
+					}
 					taskByte, err := yaml.Marshal(&task)
 					if err != nil {
 						return err
@@ -276,7 +281,25 @@ func (r *PlanReconciler) createTasks(ctx context.Context, TaskTemplateReferences
 
 			}
 		} else {
-			task := r.defineTasks(fmt.Sprintf("%s-%s-%s", plan.Name, stageName, taskTemplateRef.Name), plan.Namespace, plan.Name, branch, plan.Spec.TokenSecret, taskTemplate.Spec.Tasks, taskTemplate.Spec.Container, plan.Spec.Volume)
+			taskRefName := taskTemplateRef.Name
+			if taskTemplateRef.TaskName != "" {
+				taskRefName = taskTemplateRef.TaskName
+			}
+			task := r.defineTasks(fmt.Sprintf("%s-%s-%s", plan.Name, stageName, taskRefName), plan.Namespace, plan.Name, branch, plan.Spec.TokenSecret, taskTemplate.Spec.Tasks, taskTemplate.Spec.Container, plan.Spec.Volumes, taskTemplateRef.CPURequest, taskTemplateRef.CPULimit)
+			if taskTemplateRef.TaskVariablesMap != nil {
+				taskByte, err := yaml.Marshal(&task)
+				if err != nil {
+					return err
+				}
+				tmpl := template.Must(template.New(task.Name).Parse(string(taskByte)))
+				buf := &bytes.Buffer{}
+				if err := tmpl.Execute(buf, taskTemplateRef.TaskVariablesMap); err != nil {
+					return err
+				}
+				if err := yaml.Unmarshal(buf.Bytes(), &task); err != nil {
+					return err
+				}
+			}
 			taskList = append(taskList, task)
 		}
 
@@ -298,7 +321,7 @@ func (r *PlanReconciler) createTasks(ctx context.Context, TaskTemplateReferences
 	return nil
 }
 
-func (r *PlanReconciler) defineTasks(name, namespace, label, branch, tokenSecret string, tasks map[string]v1.GoTask, container *corev1.Container, volume *corev1.Volume) v1.Task {
+func (r *PlanReconciler) defineTasks(name, namespace, label, branch, tokenSecret string, tasks map[string]v1.GoTask, container *corev1.Container, volumes []corev1.Volume, cpuRequest, cpuLimit *int) v1.Task {
 	run := false
 	var tasksMap = make(map[string]v1.GoTask, len(tasks))
 	for k, v := range tasks {
@@ -315,8 +338,10 @@ func (r *PlanReconciler) defineTasks(name, namespace, label, branch, tokenSecret
 			Container:   container,
 			Run:         &run,
 			Branch:      branch,
-			Volume:      volume,
+			Volumes:     volumes,
 			TokenSecret: tokenSecret,
+			CPULimit:    cpuLimit,
+			CPURequest:  cpuRequest,
 		},
 	}
 	return task
@@ -324,25 +349,31 @@ func (r *PlanReconciler) defineTasks(name, namespace, label, branch, tokenSecret
 
 func (r *PlanReconciler) initializeTaskStatus(ctx context.Context, planName, namespace, stageName string, taskPhaseMap map[string]v1.TaskPhase, taskTemplateReferences []v1.TaskTemplateReference) error {
 	for _, taskRef := range taskTemplateReferences {
-
+		if taskRef.Namespace != "" {
+			namespace = taskRef.Namespace
+		}
 		taskTemplate := &v1.TaskTemplate{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskRef.Name, Namespace: namespace}, taskTemplate); err != nil {
 			klog.Error("task reference %s not found", taskRef.Name)
 			return err
 		}
-
+		taskRefName := taskRef.Name
+		if taskRef.TaskName != "" {
+			taskRefName = taskRef.TaskName
+		}
 		taskVariableConfigMap := &corev1.ConfigMap{}
-		if taskRef.TaskVariables != nil {
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: taskRef.TaskVariables.Name}, taskVariableConfigMap); err != nil {
+		if taskRef.TaskVariableConfigMap != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: taskRef.TaskVariableConfigMap.Name}, taskVariableConfigMap); err != nil {
 				return err
 			}
-			if taskVariableData, ok := taskVariableConfigMap.Data[taskRef.TaskVariables.Key]; ok {
+			if taskVariableData, ok := taskVariableConfigMap.Data[taskRef.TaskVariableConfigMap.Key]; ok {
 				var taskVariableDataMap []map[string]interface{}
 				if err := yaml.Unmarshal([]byte(taskVariableData), &taskVariableDataMap); err != nil {
 					return err
 				}
 				for idx, _ := range taskVariableDataMap {
-					taskName := fmt.Sprintf("%s-%s-%s-%d", planName, stageName, taskRef.Name, idx)
+
+					taskName := fmt.Sprintf("%s-%s-%s-%d", planName, stageName, taskRefName, idx)
 					taskPhaseMap[taskName] = v1.TaskPhase{
 						Phase: v1.INITIALIZED,
 					}
@@ -350,7 +381,7 @@ func (r *PlanReconciler) initializeTaskStatus(ctx context.Context, planName, nam
 
 			}
 		} else {
-			taskPhaseMap[fmt.Sprintf("%s-%s-%s", planName, stageName, taskRef.Name)] = v1.TaskPhase{
+			taskPhaseMap[fmt.Sprintf("%s-%s-%s", planName, stageName, taskRefName)] = v1.TaskPhase{
 				Phase: v1.INITIALIZED,
 			}
 		}
@@ -362,26 +393,33 @@ func (r *PlanReconciler) initializeTaskStatus(ctx context.Context, planName, nam
 func (r *PlanReconciler) updateTaskStatus(ctx context.Context, TaskTemplateReferences []v1.TaskTemplateReference, plan *v1.Plan, req ctrl.Request, stageName string, tokenSecret *corev1.Secret) (bool, error) {
 	updateStatus := false
 	for _, taskRef := range TaskTemplateReferences {
+		namespace := req.Namespace
+		if taskRef.Namespace != "" {
+			namespace = taskRef.Namespace
+		}
 		taskTemplate := &v1.TaskTemplate{}
-		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskRef.Name, Namespace: req.Namespace}, taskTemplate); err != nil {
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: taskRef.Name, Namespace: namespace}, taskTemplate); err != nil {
 			klog.Error("task reference %s not found", taskRef.Name)
 			return false, err
 		}
-
+		taskRefName := taskRef.Name
+		if taskRef.TaskName != "" {
+			taskRefName = taskRef.TaskName
+		}
 		var taskList []v1.Task
 		taskVariableConfigMap := &corev1.ConfigMap{}
-		if taskRef.TaskVariables != nil {
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: plan.Namespace, Name: taskRef.TaskVariables.Name}, taskVariableConfigMap); err != nil {
+		if taskRef.TaskVariableConfigMap != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: plan.Namespace, Name: taskRef.TaskVariableConfigMap.Name}, taskVariableConfigMap); err != nil {
 				return false, err
 			}
-			if taskVariableData, ok := taskVariableConfigMap.Data[taskRef.TaskVariables.Key]; ok {
+			if taskVariableData, ok := taskVariableConfigMap.Data[taskRef.TaskVariableConfigMap.Key]; ok {
 				var taskVariableDataMap []map[string]interface{}
 				if err := yaml.Unmarshal([]byte(taskVariableData), &taskVariableDataMap); err != nil {
 					return false, err
 				}
 				for idx, _ := range taskVariableDataMap {
 					task := &v1.Task{}
-					taskName := fmt.Sprintf("%s-%s-%s-%d", plan.Name, stageName, taskRef.Name, idx)
+					taskName := fmt.Sprintf("%s-%s-%s-%d", plan.Name, stageName, taskRefName, idx)
 					if err := r.Client.Get(ctx, client.ObjectKey{Name: taskName, Namespace: req.Namespace}, task); err != nil {
 						return false, err
 					}
@@ -391,7 +429,7 @@ func (r *PlanReconciler) updateTaskStatus(ctx context.Context, TaskTemplateRefer
 			}
 		} else {
 			task := &v1.Task{}
-			if err := r.Client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s-%s", plan.Name, stageName, taskRef.Name), Namespace: req.Namespace}, task); err != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s-%s", plan.Name, stageName, taskRefName), Namespace: req.Namespace}, task); err != nil {
 				return false, err
 			}
 			taskList = append(taskList, *task)

@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
+	"strconv"
 
 	"github.com/ghodss/yaml"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
@@ -80,7 +81,7 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	run := true
-	if task.Spec.Run != nil && *task.Spec.Run == false {
+	if task.Spec.Run != nil && !*task.Spec.Run {
 		run = false
 	}
 	t := struct {
@@ -153,16 +154,16 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			task.Status.Active = foundJob.Status.Active
 			task.Status.Conditions = foundJob.Status.Conditions
 			task.Status.StartTime = foundJob.Status.StartTime
-			task.Status.CompletionTime = foundJob.Status.CompletionTime
 			task.Status.Succeeded = foundJob.Status.Succeeded
 			task.Status.Failed = foundJob.Status.Failed
 			if task.Status.Active == 1 {
 				task.Status.State = v1.RUNNING
-			} else if task.Status.Succeeded > 0 {
+			} else if task.Status.Succeeded > 0 && task.Status.CompletionTime == nil {
+				task.Status.CompletionTime = foundJob.Status.CompletionTime
 				task.Status.State = v1.SUCCEEDED
-				if task.Status.CompletionTime != nil {
-					task.Status.Duration = time.Since(task.Status.CompletionTime.Time)
-				}
+				timeNow := metav1.Now()
+				duration := timeNow.Sub(task.Status.StartTime.Time)
+				task.Status.Duration = duration.String()
 			}
 			if err := r.Client.Status().Update(ctx, task, &client.UpdateOptions{}); err != nil {
 				return reconcile.Result{}, err
@@ -178,13 +179,16 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *TaskReconciler) defineJob(task *v1.Task, configMap *corev1.ConfigMap, tokenSecret *corev1.Secret) *batchv1.Job {
+
 	var volumeList []corev1.Volume
-	if task.Spec.Volume != nil {
-		volumeList = append(volumeList, *task.Spec.Volume)
-		task.Spec.Container.VolumeMounts = append(task.Spec.Container.VolumeMounts, corev1.VolumeMount{
-			Name:      task.Spec.Volume.Name,
-			MountPath: fmt.Sprintf("/mnt/%s", task.Spec.Volume.Name),
-		})
+	if task.Spec.Volumes != nil {
+		for _, volume := range task.Spec.Volumes {
+			volumeList = append(volumeList, volume)
+			task.Spec.Container.VolumeMounts = append(task.Spec.Container.VolumeMounts, corev1.VolumeMount{
+				Name:      volume.Name,
+				MountPath: fmt.Sprintf("/mnt/%s", volume.Name),
+			})
+		}
 	}
 	taskVolume := corev1.Volume{
 		Name: "task",
@@ -244,6 +248,27 @@ func (r *TaskReconciler) defineJob(task *v1.Task, configMap *corev1.ConfigMap, t
 		task.Spec.Container.Env = append(task.Spec.Container.Env, corev1.EnvVar{
 			Name:  "Plan",
 			Value: planLabel,
+		})
+	}
+	resourceRequirements := corev1.ResourceRequirements{}
+	if task.Spec.CPULimit != nil {
+		resourceRequirements.Limits = corev1.ResourceList{
+			"cpu": resource.MustParse(strconv.Itoa(*task.Spec.CPULimit)),
+		}
+		task.Spec.Container.Resources = resourceRequirements
+		task.Spec.Container.Env = append(task.Spec.Container.Env, corev1.EnvVar{
+			Name:  "cpurequest",
+			Value: strconv.Itoa(*task.Spec.CPULimit),
+		})
+	}
+	if task.Spec.CPURequest != nil {
+		resourceRequirements.Requests = corev1.ResourceList{
+			"cpu": resource.MustParse(strconv.Itoa(*task.Spec.CPURequest)),
+		}
+		task.Spec.Container.Resources = resourceRequirements
+		task.Spec.Container.Env = append(task.Spec.Container.Env, corev1.EnvVar{
+			Name:  "cpurequest",
+			Value: strconv.Itoa(*task.Spec.CPURequest),
 		})
 	}
 

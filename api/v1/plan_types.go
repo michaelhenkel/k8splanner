@@ -17,8 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -44,11 +42,11 @@ const (
 type PlanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Stages      []Stage        `json:"stages,omitempty"`
-	Volume      *corev1.Volume `json:"volume,omitempty"`
-	Branch      string         `json:"branch,omitempty"`
-	Token       string         `json:"token,omitempty"`
-	TokenSecret string         `json:"tokenSecret,omitempty"`
+	Stages      []Stage         `json:"stages,omitempty"`
+	Volumes     []corev1.Volume `json:"volumes,omitempty"`
+	Branch      string          `json:"branch,omitempty"`
+	Token       string          `json:"token,omitempty"`
+	TokenSecret string          `json:"tokenSecret,omitempty"`
 }
 
 type Stage struct {
@@ -58,13 +56,17 @@ type Stage struct {
 }
 
 type TaskTemplateReference struct {
-	corev1.TypedLocalObjectReference `json:",inline"`
-	TaskVariables                    *TaskVariable `json:"taskVariables,omitempty"`
+	corev1.ObjectReference `json:",inline"`
+	TaskName               string                 `json:"taskName,omitempty"`
+	TaskVariableConfigMap  *TaskVariableConfigMap `json:"taskVariableConfigMap,omitempty"`
+	TaskVariablesMap       map[string]string      `json:"taskVariableMap,omitempty"`
+	CPURequest             *int                   `json:"cpuRequest,omitempty"`
+	CPULimit               *int                   `json:"cpuLimit,omitempty"`
 }
 
-type TaskVariable struct {
-	corev1.TypedLocalObjectReference `json:",inline"`
-	Key                              string `json:"key,omitempty"`
+type TaskVariableConfigMap struct {
+	corev1.ObjectReference `json:",inline"`
+	Key                    string `json:"key,omitempty"`
 }
 
 //`json:",inline" protobuf:"bytes,1,opt,name=objectReference"`
@@ -79,7 +81,7 @@ type PlanStatus struct {
 	TasksActive    int                    `json:"tasksActive,omitempty"`
 	StartTime      *metav1.Time           `json:"startTime,omitempty" protobuf:"bytes,2,opt,name=startTime"`
 	CompletionTime *metav1.Time           `json:"completionTime,omitempty" protobuf:"bytes,3,opt,name=completionTime"`
-	Duration       time.Duration          `json:"durations,omitempty" protobuf:"bytes,4,opt,name=duration"`
+	Duration       string                 `json:"duration,omitempty" protobuf:"bytes,4,opt,name=duration"`
 }
 
 type StageStatus struct {
@@ -95,6 +97,7 @@ type TaskPhase struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Current Stage",type=string,JSONPath=`.status.currentStage`
+//+kubebuilder:printcolumn:name="Branch",type=string,JSONPath=`.spec.branch`
 //+kubebuilder:printcolumn:name="Start Time",type=string,JSONPath=`.status.startTime`
 //+kubebuilder:printcolumn:name="Completion Time",type=string,JSONPath=`.status.completionTime`
 //+kubebuilder:printcolumn:name="Tasks Active",type=integer,JSONPath=`.status.tasksActive`

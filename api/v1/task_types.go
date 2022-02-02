@@ -17,8 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"time"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,9 +40,11 @@ type TaskSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Tasks       map[string]GoTask `json:"tasks,omitempty"`
+	CPURequest  *int              `json:"cpuRequest,omitempty"`
+	CPULimit    *int              `json:"cpuLimit,omitempty"`
 	Container   *corev1.Container `json:"container,omitempty"`
 	Branch      string            `json:"branch,omitempty"`
-	Volume      *corev1.Volume    `json:"volume,omitempty"`
+	Volumes     []corev1.Volume   `json:"volumes,omitempty"`
 	TokenSecret string            `json:"tokenSecret,omitempty"`
 	Run         *bool             `json:"run,omitempty"`
 }
@@ -102,8 +102,8 @@ type TaskStatus struct {
 	Failed int32 `json:"failed,omitempty" protobuf:"varint,6,opt,name=failed"`
 
 	// +optional
-	State    RunningState  `json:"state,omitempty" protobuf:"varint,7,opt,name=state"`
-	Duration time.Duration `json:"durations,omitempty" protobuf:"bytes,4,opt,name=duration"`
+	State    RunningState `json:"state,omitempty" protobuf:"varint,7,opt,name=state"`
+	Duration string       `json:"duration,omitempty" protobuf:"bytes,8,opt,name=duration"`
 }
 
 //+kubebuilder:object:root=true
