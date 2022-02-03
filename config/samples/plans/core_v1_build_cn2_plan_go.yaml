@@ -12,55 +12,70 @@ spec:
       kind: TaskTemplate
   - name: build
     taskTemplateReferences:
-    - name: build-apiserver
-    - name: build-controller
-    - name: build-kubemanager
-    - name: build-deployer
-    - name: build-contrail-init
-    - name: build-vrouter-go
-    - name: build-vrouter-supervisor
+    #- name: build-apiserver
+    #- name: build-controller
+    #- name: build-kubemanager
+    #- name: build-deployer
+    #- name: build-contrail-init
+    #- name: build-vrouter-go
+    #- name: build-vrouter-supervisor
+    #- name: build-control-node
+    #  cpuLimit: 12
+    - name: build-vrouter-agent
+      cpuLimit: 12
+    #- name: build-vrouter-kernel
+    #  taskVariableConfigMap:
+    #    name: vrouter-kernels
+    #    key: vars
   - name: publish
     taskTemplateReferences:
-    - name: publish-go
-      taskName: apiserver
+    #- name: publish-go
+    #  taskName: apiserver
+    #  taskVariableMap:
+    #    BINARY: contrail-k8s-apiserver
+    #    IMAGENAME: contrail-k8s-apiserver
+    #- name: publish-go
+    #  taskName: controller
+    #  taskVariableMap:
+    #    BINARY: contrail-k8s-controller
+    #    IMAGENAME: contrail-k8s-controller
+    #- name: publish-go
+    #  taskName: contrail-init
+    #  taskVariableMap:
+    #    BINARY: contrail-init
+    #    IMAGENAME: contrail-init
+    #- name: publish-go
+    #  taskName: contrail-watch
+    #  taskVariableMap:
+    #    BINARY: contrail-init
+    #    IMAGENAME: contrail-watch
+    #- name: publish-go
+    #  taskName: deployer
+    #  taskVariableMap:
+    #    BINARY: contrail-k8s-deployer
+    #    IMAGENAME: contrail-k8s-deployer
+    #- name: publish-go
+    #  taskName: kubemanager
+    #  taskVariableMap:
+    #    BINARY: contrail-k8s-kubemanager
+    #    IMAGENAME: contrail-k8s-kubemanager
+    #- name: publish-go
+    #  taskName: vrouter-supervisor
+    #  taskVariableMap:
+    #    BINARY: vrouter-supervisor
+    #    IMAGENAME: vrouter-supervisor
+    #- name: publish-kernel-modules
+    #  taskVariableConfigMap:
+    #    name: vrouter-kernels
+    #    key: vars
+    #- name: publish-control-node
+    #  taskVariableMap:
+    #    BINARY: contrail-control
+    #    IMAGENAME: contrail-control
+    - name: publish-vrouter-agent
       taskVariableMap:
-        BINARY: contrail-k8s-apiserver
-        IMAGENAME: contrail-k8s-apiserver
-    - name: publish-go
-      taskName: controller
-      taskVariableMap:
-        BINARY: contrail-k8s-controller
-        IMAGENAME: contrail-k8s-controller
-    - name: publish-go
-      taskName: contrail-init
-      taskVariableMap:
-        BINARY: contrail-init
-        IMAGENAME: contrail-init
-    - name: publish-go
-      taskName: contrail-watch
-      taskVariableMap:
-        BINARY: contrail-init
-        IMAGENAME: contrail-watch
-    - name: publish-go
-      taskName: deployer
-      taskVariableMap:
-        BINARY: contrail-k8s-deployer
-        IMAGENAME: contrail-k8s-deployer
-    - name: publish-go
-      taskName: kubemanager
-      taskVariableMap:
-        BINARY: contrail-k8s-kubemanager
-        IMAGENAME: contrail-k8s-kubemanager
-    - name: publish-go
-      taskName: vrouter-go
-      taskVariableMap:
-        BINARY: contrail-k8s-deployer
-        IMAGENAME: contrail-k8s-deployer
-    - name: publish-go
-      taskName: vrouter-supervisor
-      taskVariableMap:
-        BINARY: vrouter-supervisor
-        IMAGENAME: vrouter-supervisor
+        BINARY: contrail-vrouter-agent
+        IMAGENAME: contrail-vrouter-agent
   volumes:
   - name: builder
     glusterfs:

@@ -30,6 +30,7 @@ spec:
       - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production -j16 control-node
       - cp ${REPOPATH}/build/production/control-node/contrail-control /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
       - strip /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-control
+      - cp /third_party_libs.tgz /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/
       sources:
       - "/tf-dev-env/**/*.cc"
       - "/tf-dev-env/**/*.c"

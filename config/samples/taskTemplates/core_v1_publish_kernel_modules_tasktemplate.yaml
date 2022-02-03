@@ -1,0 +1,35 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: publish-kernel-modules
+spec:
+  tasks:
+    push:
+      env:
+        registry: "{{ .REGISTRY }}"
+        baseImage: "{{ .BASEIMAGE }}"
+        binary: "{{ .BINARY }}"
+        imageName: "{{ .IMAGENAME }}"
+        REGISTRYDEFAULT: registry.default.svc.cluster1.local:5000
+        BASEIMAGEDEFAULT: registry.default.svc.cluster1.local:5000/cc-debian11:debug
+      cmds:
+      - if [ -z ${registry} ]; then echo ${REGISTRYDEFAULT} > /tmp/registry; else echo ${registry} > /tmp/registry; fi
+      - if [ -z ${baseImage} ]; then echo ${BASEIMAGEDEFAULT} > /tmp/baseimage; else echo ${baseImage} > /tmp/baseimage; fi
+      - printf "[[registry]]\ninsecure = true\nlocation = \"$(cat /tmp/registry)\"\n" > /etc/containers/registries.conf.d/reg.conf
+      - buildah from $(cat /tmp/baseimage) > /tmp/container
+      - buildah mount $(cat /tmp/container) > /tmp/mnt
+      - mkdir -p $(cat /tmp/mnt)/kernelmodules/{{ .KERNELVERSION }}
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/{{ .KERNELVERSION }}/vrouter.ko $(cat /tmp/mnt)/kernelmodules/{{ .KERNELVERSION }}
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-go $(cat /tmp/mnt)/
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vif $(cat /tmp/mnt)/
+      - buildah commit $(cat /tmp/container) $(cat /tmp/registry)/contrail-vrouter-kernel-init-{{ .KERNELVERSION }}:${Branch}
+      - buildah push $(cat /tmp/registry)/contrail-vrouter-kernel-init-{{ .KERNELVERSION }}:${Branch}
+      - echo pushed $(cat /tmp/registry)/contrail-vrouter-kernel-init-{{ .KERNELVERSION }}:${Branch}
+      #contrail-vrouter-kernel-init-
+  container:
+    name: pull-cn2
+    image: registry.default.svc.cluster1.local:5000/buildah
+    command: ["task", "-t","/var/task/task","push"]
+    #command: ["sh","-c","while true;do sleep 10;done"]
+    securityContext:
+      privileged: true

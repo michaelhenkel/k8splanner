@@ -1,0 +1,37 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: publish-vrouter-agent
+spec:
+  tasks:
+    push:
+      env:
+        registry: "{{ .REGISTRY }}"
+        baseImage: "{{ .BASEIMAGE }}"
+        binary: "{{ .BINARY }}"
+        imageName: "{{ .IMAGENAME }}"
+        REGISTRYDEFAULT: registry.default.svc.cluster1.local:5000
+        BASEIMAGEDEFAULT: registry.default.svc.cluster1.local:5000/agent-base
+      cmds:
+      - if [ -z ${registry} ]; then echo ${REGISTRYDEFAULT} > /tmp/registry; else echo ${registry} > /tmp/registry; fi
+      - if [ -z ${baseImage} ]; then echo ${BASEIMAGEDEFAULT} > /tmp/baseimage; else echo ${baseImage} > /tmp/baseimage; fi
+      - printf "[[registry]]\ninsecure = true\nlocation = \"$(cat /tmp/registry)\"\n" > /etc/containers/registries.conf.d/reg.conf
+      - buildah from $(cat /tmp/baseimage) > /tmp/container
+      - buildah mount $(cat /tmp/container) > /tmp/mnt
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${binary} $(cat /tmp/mnt)/
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-supervisor $(cat /tmp/mnt)/
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-go $(cat /tmp/mnt)/
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/dpdk-devbind $(cat /tmp/mnt)/
+      - tar zxvf /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/third_party_libs.tgz -C $(cat /tmp/mnt)/
+      #- ln -s $(cat /tmp/mnt)/usr/lib/x86_64-linux-gnu/liblog4cplus-1.1.so.7.0.0 $(cat /tmp/mnt)/usr/lib/x86_64-linux-gnu/liblog4cplus-1.1.so.7      
+      - for i in vif nh flow mpls mirror vxlan rt dropstats vrfstats vrinfo vrmemstats vrftable vrouter dpdkinfo dpdkconf qosmap; do cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/${i} $(cat /tmp/mnt)/usr/bin; done
+      - buildah commit $(cat /tmp/container) $(cat /tmp/registry)/${imageName}:${Branch}
+      - buildah push $(cat /tmp/registry)/${imageName}:${Branch}
+      - echo pushed $(cat /tmp/registry)/${imageName}:${Branch}
+  container:
+    name: pull-cn2
+    image: registry.default.svc.cluster1.local:5000/buildah
+    command: ["task", "-t","/var/task/task","push"]
+    #command: ["sh","-c","while true;do sleep 10;done"]
+    securityContext:
+      privileged: true
