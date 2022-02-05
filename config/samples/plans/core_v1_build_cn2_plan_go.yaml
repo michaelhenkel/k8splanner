@@ -21,6 +21,7 @@ spec:
     - name: build-vrouter-supervisor
     - name: build-crds
     - name: build-manifests
+    - name: build-cni
     - name: build-control-node
       cpuLimit: 12
     - name: build-vrouter-agent
@@ -81,6 +82,11 @@ spec:
     - name: publish-crdloader
       taskVariableMap:
         IMAGENAME: contrail-k8s-crdloader
+    - name: publish-go
+      taskName: contrail-cni
+      taskVariableMap:
+        BINARY: contrail-k8s-cni
+        IMAGENAME: contrail-cni-init
   volumes:
   - name: builder
     glusterfs:

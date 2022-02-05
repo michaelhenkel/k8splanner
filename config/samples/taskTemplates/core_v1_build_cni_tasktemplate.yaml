@@ -1,0 +1,33 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: build-cni
+spec:
+  tasks:
+    build:
+      env:
+        GOPATH: /root/go
+        GOCACHE: /mnt/buildcache/.cache/go-build
+        GOPKGCACHE: /mnt/buildcache/pkg
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+        GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
+      cmds:
+      - if [ ! -d "${GOCACHE}" ]; then mkdir -p ${GOCACHE}; fi
+      - if [ ! -d "${GOPKGCACHE}" ]; then mkdir -p ${GOPKGCACHE}; fi
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
+      - ln -s ${GOPKGCACHE} /root/go/pkg
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
+      - cd ${REPOPATH}/controller/src/container/cni && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-cni ./kube_cni
+      sources:
+      - "${REPOPATH}/controller/src/container/cni/**/*.go"
+      generates:
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/contrail-k8s-cni
+  container:
+    name: build-cni
+    image: registry.default.svc.cluster1.local:5000/tasker
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/cni-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/cni-task.yaml build"]
+  
+
+
