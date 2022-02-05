@@ -4,7 +4,7 @@ metadata:
   name: build-vrouter-agent
 spec:
   tasks:
-    agent:
+    prep:
       env:
         GOPATH: /root/go
         CCACHE_DIR: /mnt/buildcache/.cache/ccache
@@ -23,9 +23,19 @@ spec:
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
       - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
+      - ln -s ${GOPKGCACHE} /root/go/pkg
+    agent:
+      env:
+        GOPATH: /root/go
+        CCACHE_DIR: /mnt/buildcache/.cache/ccache
+        BUILDPATH: /mnt/buildcache/build
+        GOCACHE: /mnt/builder/.cache/go-build
+        GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
+        GOPKGCACHE: /mnt/buildcache/pkg
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+      cmds:
       - cp -r /tf-dev-env/third_party/* ${REPOPATH}/third_party/
       - rm -rf ${REPOPATH}/build
-      - ln -s ${GOPKGCACHE} /root/go/pkg
       - if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi
       - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production ${cpus} contrail-vrouter-agent
       - cd ${REPOPATH} && if [ -n ${cpurequest} ]; then cpus="-j${cpurequest}"; fi && scons --c++=c++11 --opt=production ${cpus} vrouter/utils
@@ -72,7 +82,7 @@ spec:
         GOPKGCACHE: /mnt/buildcache/pkg
         REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
       cmds:
-      - cd ${REPOPATH}/vrouter-supervisor && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-supervisor main.go
+      - cd ${REPOPATH}/vrouter-supervisor && /usr/local/go/bin/go mod tidy && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-supervisor main.go
       sources:
       - "${REPOPATH}/vrouter-supervisor/**/*.go"
       generates:
@@ -81,4 +91,4 @@ spec:
     name: build-vrouter-agent
     image: registry.default.svc.cluster1.local:5000/c-builder:latest
     #command: ["sh","-c","while true;do sleep 10;done"]
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml agent vroutergo dpdkdevbind supervisor"]
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/vrouter-agent-task.yaml prep agent vroutergo dpdkdevbind supervisor"]

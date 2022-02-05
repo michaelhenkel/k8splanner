@@ -1,7 +1,7 @@
 apiVersion: core.michaelhenkel/v1
 kind: TaskTemplate
 metadata:
-  name: build-vrouter-supervisor
+  name: build-crds
 spec:
   tasks:
     build:
@@ -19,15 +19,17 @@ spec:
       - ln -s ${GOPKGCACHE} /root/go/pkg
       - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
       - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
-      - cd ${REPOPATH}/vrouter-supervisor && /usr/local/go/bin/go mod tidy && /usr/local/go/bin/go build -o /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-supervisor main.go
+      - cd ${REPOPATH}/deployer; ${GOPATH}/bin/controller-gen crd:trivialVersions=true,preserveUnknownFields=false paths="./pkg/apis/controlplane/v1alpha1/..." paths="./pkg/apis/configplane/v1alpha1/..." paths="./pkg/apis/dataplane/v1alpha1/..." output:crd:artifacts:config=config/crd/bases
+      - cp -r /usr/local/bin/kubectl /usr/local/bin/kustomize ${REPOPATH}/deployer/config/crd /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out
       sources:
-      - "${REPOPATH}/vrouter-supervisor/**/*.go"
+      - "${REPOPATH}/deployer/pkg/apis/**/*.go"
       generates:
-      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/vrouter-supervisor
+      - /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/crd/**
   container:
-    name: build-vrouter-supervisor
-    image: registry.default.svc.cluster1.local:5000/tasker
-    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/vrouter-supervisor-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/vrouter-supervisor-task.yaml build"]
+    name: build-crds
+    image: registry.default.svc.cluster1.local:5000/crdloader-builder
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/crdloader-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/crdloader-task.yaml build"]
+    #command: ["sh","-c", "while true; do sleep 10;done"]
   
 
 

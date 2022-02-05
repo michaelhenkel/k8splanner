@@ -85,6 +85,14 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+.PHONY: podman-build
+podman-build: test ## Build docker image with the manager.
+	podman build -t ${IMG} .
+
+.PHONY: podman-push
+podman-push: ## Push docker image with the manager.
+	podman push ${IMG}
+
 ##@ Deployment
 
 ifndef ignore-not-found

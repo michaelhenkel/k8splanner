@@ -48,9 +48,9 @@ type PlanReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans;tasks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans/status;tasks/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans/finalizers;tasks/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans;tasks;tasktemplates,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans/status;tasks/status;tasktemplates/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core.michaelhenkel,resources=plans/finalizers;tasks/finalizers;tasktemplates/finalizers,verbs=update
 
 //+kubebuilder:rbac:groups="",resources=pods;secrets;configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods/status;secrets/status;configmaps/status,verbs=get;update;patch

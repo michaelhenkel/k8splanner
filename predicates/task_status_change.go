@@ -33,3 +33,11 @@ func (p TaskStatusChangePredicate) Update(e event.UpdateEvent) bool {
 	}
 	return oldTask.Status.State != newTask.Status.State
 }
+
+func (p TaskStatusChangePredicate) Delete(e event.DeleteEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+	_, ok := e.Object.(*v1.Task)
+	return ok
+}

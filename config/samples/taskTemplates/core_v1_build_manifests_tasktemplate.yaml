@@ -1,0 +1,31 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: build-manifests
+spec:
+  tasks:
+    build:
+      env:
+        registry: "{{ .REGISTRY }}"
+        REGISTRYDEFAULT: registry.default.svc.cluster1.local:5000
+        GOPATH: /root/go
+        GOCACHE: /mnt/buildcache/.cache/go-build
+        GOPKGCACHE: /mnt/buildcache/pkg
+        REPOPATH: /root/go/src/ssd-git.juniper.net/contrail/cn2
+        GOPROXY: https://svl-artifactory.juniper.net/artifactory/api/go/go,direct
+      cmds:
+      - if [ -z ${registry} ]; then echo ${REGISTRYDEFAULT} > /tmp/registry; else echo ${registry} > /tmp/registry; fi
+      - if [ ! -d "/mnt/builder/${PodNamespace}/${Plan}/${Branch}/out" ]; then mkdir -p /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out; fi
+      - if [ ! -d "${REPOPATH}" ]; then mkdir -p ${REPOPATH}; fi
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/archive.tar.gz /archive.tar.gz
+      - tar -C ${REPOPATH} --strip-components 1 -zxf /archive.tar.gz
+      - sed "s#svl-artifactory.juniper.net/atom-docker/cn2/bazel-build/dev#$(cat /tmp/registry)#g" ${REPOPATH}/deployer/manifests/kustomize/applier/svl/latest/deployer.yaml >  /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/deployer.yaml
+      - sed -i "s/:latest/:${Branch}/g" /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/deployer.yaml
+  container:
+    name: build-manifests
+    image: registry.default.svc.cluster1.local:5000/crdloader-builder
+    command: ["sh","-c","cp /var/task/task /mnt/builder/${PodNamespace}/${Plan}/manifests-task.yaml; task -t /mnt/builder/${PodNamespace}/${Plan}/manifests-task.yaml build"]
+    #command: ["sh","-c", "while true; do sleep 10;done"]
+  
+
+

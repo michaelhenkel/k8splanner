@@ -68,6 +68,7 @@ rules:
   resources:
   - plans
   - tasks
+  - tasktemplates
   verbs:
   - create
   - delete
@@ -81,6 +82,7 @@ rules:
   resources:
   - plans/finalizers
   - tasks/finalizers
+  - tasktemplates/finalizers
   verbs:
   - update
 - apiGroups:
@@ -88,6 +90,7 @@ rules:
   resources:
   - plans/status
   - tasks/status
+  - tasktemplates/status
   verbs:
   - get
   - patch

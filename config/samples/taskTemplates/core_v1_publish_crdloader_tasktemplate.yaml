@@ -1,0 +1,33 @@
+apiVersion: core.michaelhenkel/v1
+kind: TaskTemplate
+metadata:
+  name: publish-crdloader
+spec:
+  tasks:
+    push:
+      env:
+        registry: "{{ .REGISTRY }}"
+        baseImage: "{{ .BASEIMAGE }}"
+        imageName: "{{ .IMAGENAME }}"
+        REGISTRYDEFAULT: registry.default.svc.cluster1.local:5000
+        BASEIMAGEDEFAULT: registry.default.svc.cluster1.local:5000/base-debian11:debug
+      cmds:
+      - if [ -z ${registry} ]; then echo ${REGISTRYDEFAULT} > /tmp/registry; else echo ${registry} > /tmp/registry; fi
+      - if [ -z ${baseImage} ]; then echo ${BASEIMAGEDEFAULT} > /tmp/baseimage; else echo ${baseImage} > /tmp/baseimage; fi
+      - printf "[[registry]]\ninsecure = true\nlocation = \"$(cat /tmp/registry)\"\n" > /etc/containers/registries.conf.d/reg.conf
+      - buildah from $(cat /tmp/baseimage) > /tmp/container
+      - buildah mount $(cat /tmp/container) > /tmp/mnt
+      - mkdir -p $(cat /tmp/mnt)/usr/local/bin
+      - cp -r /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/crd $(cat /tmp/mnt)/
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/kubectl $(cat /tmp/mnt)/usr/local/bin
+      - cp /mnt/builder/${PodNamespace}/${Plan}/${Branch}/out/kustomize $(cat /tmp/mnt)/usr/local/bin
+      - buildah commit $(cat /tmp/container) $(cat /tmp/registry)/${imageName}:${Branch}
+      - buildah push $(cat /tmp/registry)/${imageName}:${Branch}
+      - echo pushed $(cat /tmp/registry)/${imageName}:${Branch}
+  container:
+    name: build-crdloader
+    image: registry.default.svc.cluster1.local:5000/buildah
+    command: ["task", "-t","/var/task/task","push"]
+    #command: ["sh","-c","while true;do sleep 10;done"]
+    securityContext:
+      privileged: true
